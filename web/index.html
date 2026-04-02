@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>📰 NEWS ARCADE</title>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    /* ═══════════════════════════════════════════════
+       RESET & BASE
+    ═══════════════════════════════════════════════ */
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    :root {
+      --yellow:  #ffff00;
+      --cyan:    #00ffff;
+      --magenta: #ff00ff;
+      --green:   #00ff00;
+      --orange:  #ff6600;
+      --blue:    #4444ff;
+      --white:   #ffffff;
+      --bg:      #080808;
+      --card-bg: #0e0e0e;
+      --border:  #2a2a2a;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background-color: var(--bg);
+      color: var(--white);
+      font-family: 'Press Start 2P', 'Courier New', monospace;
+      min-height: 100vh;
+      /* scanline overlay */
+      background-image:
+        repeating-linear-gradient(
+          0deg,
+          transparent 0px,
+          transparent 3px,
+          rgba(0,0,0,0.18) 3px,
+          rgba(0,0,0,0.18) 4px
+        );
+    }
+
+    /* ═══════════════════════════════════════════════
+       PIXEL BORDER UTILITY
+    ═══════════════════════════════════════════════ */
+    .px-border-yellow { border: 3px solid var(--yellow); box-shadow: 4px 4px 0 var(--yellow); }
+    .px-border-cyan   { border: 3px solid var(--cyan);   box-shadow: 4px 4px 0 var(--cyan);   }
+    .px-border-green  { border: 3px solid var(--green);  box-shadow: 4px 4px 0 var(--green);  }
+    .px-border-orange { border: 3px solid var(--orange); box-shadow: 4px 4px 0 var(--orange); }
+
+    /* ═══════════════════════════════════════════════
+       ANIMATIONS
+    ═══════════════════════════════════════════════ */
+    @keyframes blink     { 0%,100%{opacity:1} 50%{opacity:0} }
+    @keyframes float     { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+    @keyframes titleGlow {
+      from { text-shadow: 4px 4px 0 #ff6600, 0 0 10px rgba(255,255,0,0.2); }
+      to   { text-shadow: 4px 4px 0 #ff0000, 0 0 30px rgba(255,255,0,0.6), 0 0 60px rgba(255,200,0,0.3); }
+    }
+    @keyframes scanMove {
+      from { background-position: 0 0; }
+      to   { background-position: 0 100%; }
+    }
+    @keyframes marqueeScroll {
+      from { transform: translateX(100%); }
+      to   { transform: translateX(-100%); }
+    }
+    @keyframes pixelSpin {
+      0%   { transform: rotate(0deg)   scale(1);    }
+      25%  { transform: rotate(90deg)  scale(1.1);  }
+      50%  { transform: rotate(180deg) scale(1);    }
+      75%  { transform: rotate(270deg) scale(1.1);  }
+      100% { transform: rotate(360deg) scale(1);    }
+    }
+    @keyframes loadingDots {
+      0%   { content: ''; }
+      33%  { content: '.'; }
+      66%  { content: '..'; }
+      100% { content: '...'; }
+    }
+
+    /* ═══════════════════════════════════════════════
+       HEADER
+    ═══════════════════════════════════════════════ */
+    .header {
+      background: linear-gradient(180deg, #000033 0%, #000822 60%, #0a0a0a 100%);
+      border-bottom: 4px solid var(--yellow);
+      padding: 32px 20px 20px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse at 50% 0%, rgba(255,255,0,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    /* Pixel stars background */
+    .header-stars {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    .star {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: var(--white);
+      animation: blink var(--d,2s) step-end infinite;
+      animation-delay: var(--delay, 0s);
+    }
+
+    .header-icon {
+      font-size: 2.5rem;
+      animation: float 3s ease-in-out infinite;
+      display: block;
+      margin-bottom: 12px;
+    }
+
+    .header-title {
+      font-size: clamp(1.2rem, 4vw, 2.2rem);
+      color: var(--yellow);
+      letter-spacing: 4px;
+      animation: titleGlow 2s ease-in-out infinite alternate;
+      position: relative;
+      z-index: 1;
+    }
+
+    .header-subtitle {
+      font-size: clamp(0.4rem, 1.5vw, 0.55rem);
+      color: var(--cyan);
+      margin-top: 10px;
+      animation: blink 1.2s step-end infinite;
+      letter-spacing: 2px;
+    }
+
+    .header-stats {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 24px;
+      margin-top: 20px;
+      font-size: 13px;
+    }
+
+    .stat {
+      color: #888;
+    }
+    .stat-val {
+      color: var(--green);
+    }
+
+    /* Marquee ticker */
+    .ticker {
+      background: #000;
+      border-top: 2px solid var(--yellow);
+      border-bottom: 2px solid var(--yellow);
+      padding: 6px 0;
+      overflow: hidden;
+      white-space: nowrap;
+      font-size: 12px;
+      color: var(--yellow);
+    }
+    .ticker-inner {
+      display: inline-block;
+      animation: marqueeScroll 20s linear infinite;
+    }
+
+    /* ═══════════════════════════════════════════════
+       CONTROLS BAR
+    ═══════════════════════════════════════════════ */
+    .controls {
+      background: #0a0a0a;
+      border-bottom: 2px solid var(--border);
+      padding: 16px 20px 12px;
+    }
+
+    .search-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .search-label {
+      font-size: 13px;
+      color: var(--cyan);
+      white-space: nowrap;
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 200px;
+      max-width: 480px;
+      background: #000;
+      border: 3px solid var(--cyan);
+      color: var(--green);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 13px;
+      padding: 9px 14px;
+      outline: none;
+      transition: border-color 0.1s, box-shadow 0.1s;
+    }
+    .search-input:focus {
+      border-color: var(--yellow);
+      box-shadow: 0 0 12px rgba(255,255,0,0.25);
+    }
+    .search-input::placeholder { color: #333; }
+
+    .clear-btn {
+      background: #111;
+      border: 2px solid #444;
+      color: #888;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 12px;
+      padding: 8px 12px;
+      cursor: pointer;
+      transition: all 0.1s;
+    }
+    .clear-btn:hover { border-color: var(--orange); color: var(--orange); }
+
+    .filter-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .filter-label {
+      font-size: 12px;
+      color: #777;
+    }
+
+    .cat-btn {
+      background: #000;
+      border: 2px solid #444;
+      color: #888;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 12px;
+      padding: 7px 12px;
+      cursor: pointer;
+      transition: all 0.1s;
+    }
+    .cat-btn:hover { border-color: var(--cyan); color: var(--cyan); }
+    .cat-btn.active[data-category="all"]           { background: #1a1a00; border-color: var(--yellow); color: var(--yellow); }
+    .cat-btn.active[data-category="좋은 프로젝트"] { background: #001a00; border-color: var(--green);  color: var(--green);  }
+    .cat-btn.active[data-category="경제 뉴스 정리"]{ background: #1a0800; border-color: var(--orange); color: var(--orange); }
+    .cat-btn.active[data-category="아이디어"]      { background: #001a1a; border-color: var(--cyan);   color: var(--cyan);   }
+    .cat-btn.active[data-category="처리해야 할 일"]{ background: #1a001a; border-color: var(--magenta);color: var(--magenta);}
+
+    /* 카드 카테고리 배지 4종 */
+    .cat-badge.project { background: #001800; color: var(--green);   border: 1px solid var(--green); }
+    .cat-badge.economy { background: #180800; color: var(--orange);  border: 1px solid var(--orange); }
+    .cat-badge.idea    { background: #001818; color: var(--cyan);    border: 1px solid var(--cyan); }
+    .cat-badge.todo    { background: #180018; color: var(--magenta); border: 1px solid var(--magenta); }
+    .cat-badge.other   { background: #000d1a; color: var(--cyan);    border: 1px solid var(--cyan); }
+
+    /* ═══════════════════════════════════════════════
+       TAG CLOUD
+    ═══════════════════════════════════════════════ */
+    .tag-cloud-wrap {
+      background: #060606;
+      border-bottom: 1px solid #1a1a1a;
+      padding: 10px 20px;
+    }
+
+    .tag-cloud {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+
+    .tc-label {
+      font-size: 12px;
+      color: #666;
+      margin-right: 4px;
+    }
+
+    .tag-btn {
+      background: #111;
+      border: 2px solid #2a2a2a;
+      color: #888;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 11px;
+      padding: 5px 10px;
+      cursor: pointer;
+      transition: all 0.1s;
+    }
+    .tag-btn::before { content: '★ '; color: #444; }
+    .tag-btn:hover   { border-color: var(--magenta); color: var(--magenta); }
+    .tag-btn:hover::before { color: var(--magenta); }
+    .tag-btn.active  { background: #160020; border-color: var(--magenta); color: var(--magenta); }
+    .tag-btn.active::before { color: var(--magenta); }
+    .tag-count { color: #555; margin-left: 2px; }
+
+    /* ═══════════════════════════════════════════════
+       RESULTS BAR
+    ═══════════════════════════════════════════════ */
+    .results-bar {
+      padding: 8px 20px;
+      font-size: 12px;
+      color: #666;
+      background: #080808;
+      border-bottom: 1px solid #111;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .results-count { color: var(--green); }
+    .active-filters { display: flex; flex-wrap: wrap; gap: 6px; }
+    .active-filter-chip {
+      font-size: 11px;
+      padding: 3px 8px;
+      background: #1a1a00;
+      border: 1px solid var(--yellow);
+      color: var(--yellow);
+      cursor: pointer;
+    }
+    .active-filter-chip::after { content: ' ✕'; }
+
+    /* ═══════════════════════════════════════════════
+       NEWS GRID
+    ═══════════════════════════════════════════════ */
+    .news-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+      gap: 24px;
+      padding: 24px;
+      max-width: 1600px;
+      margin: 0 auto;
+    }
+
+    /* ═══════════════════════════════════════════════
+       NEWS CARD — fixed height
+    ═══════════════════════════════════════════════ */
+    .news-card {
+      background: var(--card-bg);
+      border: 3px solid var(--border);
+      position: relative;
+      transition: transform 0.08s, border-color 0.08s, box-shadow 0.08s;
+      /* 고정 높이 */
+      height: 400px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .news-card:hover {
+      transform: translate(-4px, -4px);
+    }
+    .news-card.cat-project:hover {
+      border-color: var(--green);
+      box-shadow: 4px 4px 0 var(--green);
+    }
+    .news-card.cat-economy:hover {
+      border-color: var(--orange);
+      box-shadow: 4px 4px 0 var(--orange);
+    }
+    .news-card.cat-idea:hover {
+      border-color: var(--cyan);
+      box-shadow: 4px 4px 0 var(--cyan);
+    }
+    .news-card.cat-todo:hover {
+      border-color: var(--magenta);
+      box-shadow: 4px 4px 0 var(--magenta);
+    }
+    .news-card.cat-other:hover {
+      border-color: var(--cyan);
+      box-shadow: 4px 4px 0 var(--cyan);
+    }
+
+    /* Card corner decoration */
+    .news-card::before {
+      content: '▪';
+      position: absolute;
+      top: 4px;
+      right: 6px;
+      font-size: 12px;
+      color: var(--border);
+    }
+    .news-card.cat-project::before { color: var(--green);   opacity: 0.4; }
+    .news-card.cat-economy::before { color: var(--orange);  opacity: 0.4; }
+    .news-card.cat-idea::before    { color: var(--cyan);    opacity: 0.4; }
+    .news-card.cat-todo::before    { color: var(--magenta); opacity: 0.4; }
+
+    /* ── Card Header ── */
+    .card-header {
+      padding: 10px 14px;
+      border-bottom: 2px solid #1a1a1a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    .cat-badge {
+      font-size: 11px;
+      padding: 4px 9px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .cat-badge.project { background: #001800; color: var(--green);  border: 1px solid var(--green); }
+    .cat-badge.economy { background: #180800; color: var(--orange); border: 1px solid var(--orange); }
+    .cat-badge.other   { background: #000d1a; color: var(--cyan);   border: 1px solid var(--cyan); }
+
+    .card-date {
+      font-size: 11px;
+      color: #666;
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    /* ── Card Body ── */
+    .card-body {
+      padding: 14px;
+      flex: 1;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .card-subject {
+      font-size: 14px;
+      color: var(--white);
+      line-height: 1.6;
+      margin-bottom: 10px;
+      word-break: keep-all;
+      /* 최대 3줄, 초과시 말줄임 */
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .section-label {
+      font-size: 11px;
+      color: #888;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      flex-shrink: 0;
+    }
+    .section-label::before { content: '▶'; color: var(--cyan); font-size: 10px; }
+    .section-label.opinion-lbl::before { content: '▶'; color: #cc88ff; }
+
+    /* URLs */
+    .card-urls { margin-bottom: 8px; flex-shrink: 0; }
+
+    .url-link {
+      display: block;
+      font-size: 12px;
+      color: var(--cyan);
+      text-decoration: none;
+      word-break: break-all;
+      padding: 3px 8px;
+      border-left: 3px solid #003333;
+      margin-bottom: 3px;
+      transition: border-color 0.1s, color 0.1s;
+      font-family: 'Courier New', monospace;
+      /* 1줄 말줄임 */
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .url-link:hover { border-left-color: var(--cyan); color: var(--yellow); }
+
+    /* Summary */
+    .card-summary { margin-bottom: 8px; flex: 1; min-height: 0; overflow: hidden; }
+
+    .summary-text {
+      font-size: 13px;
+      color: #bbb;
+      line-height: 1.8;
+      font-family: 'Courier New', monospace;
+      word-break: keep-all;
+      overflow: hidden;
+      /* 카드 고정 높이에서 4줄만 표시 */
+      display: -webkit-box;
+      -webkit-line-clamp: 4;
+      -webkit-box-orient: vertical;
+    }
+    /* expanded 상태 */
+    .summary-text.expanded {
+      display: block;
+      max-height: none;
+      -webkit-line-clamp: unset;
+    }
+
+    /* Opinion */
+    .card-opinion {
+      margin-bottom: 8px;
+      background: #0d0018;
+      border: 1px solid #2a0050;
+      padding: 8px 10px;
+      flex-shrink: 0;
+    }
+
+    .opinion-text {
+      font-size: 13px;
+      color: #cc88ff;
+      line-height: 1.8;
+      font-family: 'Courier New', monospace;
+      word-break: keep-all;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .opinion-text.expanded {
+      display: block;
+      -webkit-line-clamp: unset;
+    }
+
+    /* Tags */
+    .card-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      padding-top: 8px;
+      border-top: 1px solid #1a1a1a;
+      margin-top: auto;
+      /* 태그가 넘쳐도 1줄만 */
+      max-height: 32px;
+      overflow: hidden;
+      flex-shrink: 0;
+    }
+
+    .tag-chip {
+      font-size: 11px;
+      padding: 4px 8px;
+      background: #090918;
+      border: 1px solid #2a2a5a;
+      color: #6666cc;
+      cursor: pointer;
+      transition: all 0.1s;
+      font-family: 'Press Start 2P', monospace;
+      white-space: nowrap;
+    }
+    .tag-chip::before { content: '#'; margin-right: 2px; color: #3a3a7a; }
+    .tag-chip:hover { background: #14144a; border-color: #8888ff; color: #aaaaff; }
+    .tag-chip.active { background: #160030; border-color: var(--magenta); color: var(--magenta); }
+
+    /* ── Card Footer ── */
+    .card-footer {
+      padding: 7px 14px;
+      border-top: 1px solid #1a1a1a;
+      display: flex;
+      justify-content: flex-end;
+      flex-shrink: 0;
+    }
+
+    .expand-btn {
+      background: none;
+      border: 1px solid #2a2a2a;
+      color: #666;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 11px;
+      padding: 5px 10px;
+      cursor: pointer;
+      transition: all 0.1s;
+    }
+    .expand-btn:hover { border-color: var(--yellow); color: var(--yellow); }
+
+    /* ── Card 클릭 커서 ── */
+    .news-card { cursor: pointer; }
+    .news-card .url-link { cursor: pointer; }
+
+    /* ═══════════════════════════════════════════════
+       MODAL (전체 내용 보기)
+    ═══════════════════════════════════════════════ */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.88);
+      z-index: 1000;
+      overflow-y: auto;
+      padding: 24px 16px;
+      /* scanline */
+      background-image: repeating-linear-gradient(
+        0deg, transparent 0px, transparent 3px,
+        rgba(0,0,0,0.25) 3px, rgba(0,0,0,0.25) 4px
+      );
+    }
+    .modal-overlay.open { display: flex; justify-content: center; align-items: flex-start; }
+
+    .modal-box {
+      background: #0a0a0a;
+      border: 3px solid var(--yellow);
+      box-shadow: 6px 6px 0 var(--yellow);
+      max-width: 860px;
+      width: 100%;
+      position: relative;
+      animation: modalIn 0.1s steps(3) forwards;
+    }
+    @keyframes modalIn {
+      from { transform: scale(0.92); opacity: 0; }
+      to   { transform: scale(1);    opacity: 1; }
+    }
+
+    .modal-header {
+      padding: 12px 16px;
+      border-bottom: 2px solid #2a2a00;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      background: #0d0d00;
+    }
+    .modal-close {
+      background: none;
+      border: 2px solid #444;
+      color: var(--yellow);
+      font-family: 'Press Start 2P', monospace;
+      font-size: 14px;
+      width: 36px; height: 36px;
+      cursor: pointer;
+      flex-shrink: 0;
+      transition: all 0.1s;
+    }
+    .modal-close:hover { background: var(--yellow); color: #000; }
+
+    .modal-body {
+      padding: 20px 24px;
+    }
+
+    .modal-subject {
+      font-size: 16px;
+      color: var(--white);
+      line-height: 1.7;
+      margin-bottom: 14px;
+      word-break: keep-all;
+      font-family: 'Press Start 2P', monospace;
+    }
+
+    .modal-meta {
+      font-size: 12px;
+      color: #666;
+      margin-bottom: 18px;
+      font-family: 'Courier New', monospace;
+    }
+
+    .modal-section { margin-bottom: 18px; }
+
+    .modal-section-title {
+      font-size: 11px;
+      color: var(--cyan);
+      font-family: 'Press Start 2P', monospace;
+      margin-bottom: 8px;
+      padding-bottom: 4px;
+      border-bottom: 1px solid #003333;
+    }
+    .modal-section-title.opinion { color: #cc88ff; border-color: #2a0050; }
+    .modal-section-title.tags-lbl { color: var(--magenta); border-color: #300030; }
+
+    .modal-url-link {
+      display: block;
+      font-size: 13px;
+      color: var(--cyan);
+      text-decoration: none;
+      word-break: break-all;
+      padding: 5px 10px;
+      border-left: 3px solid #003333;
+      margin-bottom: 5px;
+      font-family: 'Courier New', monospace;
+      transition: border-color 0.1s, color 0.1s;
+    }
+    .modal-url-link:hover { border-left-color: var(--cyan); color: var(--yellow); }
+
+    .modal-text {
+      font-size: 14px;
+      color: #ccc;
+      line-height: 1.9;
+      font-family: 'Courier New', monospace;
+      white-space: pre-wrap;
+      word-break: keep-all;
+    }
+    .modal-opinion-text {
+      font-size: 14px;
+      color: #cc88ff;
+      line-height: 1.9;
+      font-family: 'Courier New', monospace;
+      white-space: pre-wrap;
+      word-break: keep-all;
+      background: #0d0018;
+      border: 1px solid #2a0050;
+      padding: 12px;
+    }
+
+    .modal-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    /* ═══════════════════════════════════════════════
+       EMPTY / LOADING STATES
+    ═══════════════════════════════════════════════ */
+    .state-box {
+      grid-column: 1 / -1;
+      text-align: center;
+      padding: 80px 20px;
+    }
+
+    .state-icon {
+      font-size: 3rem;
+      display: block;
+      margin-bottom: 20px;
+      animation: float 3s ease-in-out infinite;
+    }
+
+    .state-title {
+      font-size: 0.7rem;
+      color: #333;
+      margin-bottom: 12px;
+    }
+
+    .state-sub {
+      font-size: 13px;
+      color: #444;
+      line-height: 2;
+      font-family: 'Courier New', monospace;
+    }
+
+    .loading-icon {
+      animation: pixelSpin 1.5s steps(4) infinite;
+    }
+
+    .loading-dots::after {
+      content: '';
+      animation: loadingDots 1.5s infinite;
+    }
+
+    /* ═══════════════════════════════════════════════
+       FOOTER
+    ═══════════════════════════════════════════════ */
+    .footer {
+      text-align: center;
+      padding: 24px 20px;
+      font-size: 12px;
+      color: #444;
+      border-top: 2px solid #111;
+      margin-top: 20px;
+    }
+    .footer-line { margin-bottom: 8px; }
+
+    /* ═══════════════════════════════════════════════
+       RESPONSIVE
+    ═══════════════════════════════════════════════ */
+    @media (max-width: 640px) {
+      .header-title { font-size: 1rem; letter-spacing: 2px; }
+      .news-grid { grid-template-columns: 1fr; padding: 10px; gap: 12px; }
+      .header-stats { gap: 12px; }
+      .search-input { font-size: 12px; }
+      .news-card { height: auto; min-height: 360px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══ HEADER ═══ -->
+<header class="header">
+  <div class="header-stars" id="header-stars"></div>
+  <span class="header-icon">🎮</span>
+  <h1 class="header-title">📰 NEWS ARCADE 📰</h1>
+  <p class="header-subtitle">▶ INSERT COIN TO READ THE NEWS ◀</p>
+  <div class="header-stats">
+    <div class="stat">TOTAL: <span class="stat-val" id="stat-total">--</span></div>
+    <div class="stat">🚀 프로젝트: <span class="stat-val" id="stat-project">--</span></div>
+    <div class="stat">📈 경제뉴스: <span class="stat-val" id="stat-economy">--</span></div>
+    <div class="stat">💡 아이디어: <span class="stat-val" id="stat-idea">--</span></div>
+    <div class="stat">✅ 할일: <span class="stat-val" id="stat-todo">--</span></div>
+    <div class="stat">🏷️ TAGS: <span class="stat-val" id="stat-tags">--</span></div>
+  </div>
+</header>
+
+<!-- Ticker -->
+<div class="ticker">
+  <span class="ticker-inner" id="ticker-text">
+    ★ NEWS ARCADE ★ 최신 뉴스를 픽셀 스타일로 즐기세요 ★ 태그로 검색하세요 ★ LOADING...
+  </span>
+</div>
+
+<!-- ═══ CONTROLS ═══ -->
+<div class="controls">
+  <div class="search-row">
+    <span class="search-label">🔍</span>
+    <input
+      type="text"
+      class="search-input"
+      id="search-input"
+      placeholder="키워드 입력..."
+      autocomplete="off"
+      spellcheck="false"
+    >
+    <button class="clear-btn" id="clear-btn" title="초기화">CLR</button>
+  </div>
+  <div class="filter-row">
+    <span class="filter-label">STAGE:</span>
+    <button class="cat-btn active" data-category="all">ALL</button>
+    <button class="cat-btn" data-category="좋은 프로젝트">🚀 프로젝트</button>
+    <button class="cat-btn" data-category="경제 뉴스 정리">📈 경제뉴스</button>
+    <button class="cat-btn" data-category="아이디어">💡 아이디어</button>
+    <button class="cat-btn" data-category="처리해야 할 일">✅ 처리해야할일</button>
+  </div>
+</div>
+
+<!-- ═══ TAG CLOUD ═══ -->
+<div class="tag-cloud-wrap">
+  <div class="tag-cloud" id="tag-cloud">
+    <span class="tc-label">POWER-UPS:</span>
+  </div>
+</div>
+
+<!-- ═══ RESULTS BAR ═══ -->
+<div class="results-bar">
+  <span>RESULTS: <span class="results-count" id="results-count">0</span></span>
+  <div class="active-filters" id="active-filters"></div>
+</div>
+
+<!-- ═══ GRID ═══ -->
+<main class="news-grid" id="news-grid">
+  <div class="state-box">
+    <span class="state-icon loading-icon">⚙️</span>
+    <div class="state-title">LOADING<span class="loading-dots"></span></div>
+    <div class="state-sub">데이터를 불러오는 중입니다</div>
+  </div>
+</main>
+
+<!-- ═══ FOOTER ═══ -->
+<footer class="footer">
+  <div class="footer-line">© NEWS ARCADE — POWERED BY GMAIL API</div>
+  <div class="footer-line" style="color:#111">▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓</div>
+  <div class="footer-line">PRESS START 2P — 8BIT NEWS READER</div>
+</footer>
+
+<script>
+  // ════════════════════════════════════════════
+  //  STATE
+  // ════════════════════════════════════════════
+  let allNews = [];
+  let activeCategory = 'all';
+  let activeTags = new Set();
+  let searchQuery = '';
+
+  // ════════════════════════════════════════════
+  //  PIXEL STARS
+  // ════════════════════════════════════════════
+  function initStars() {
+    const container = document.getElementById('header-stars');
+    for (let i = 0; i < 40; i++) {
+      const star = document.createElement('div');
+      star.className = 'star';
+      star.style.cssText = `
+        left: ${Math.random() * 100}%;
+        top:  ${Math.random() * 100}%;
+        --d:  ${1 + Math.random() * 3}s;
+        --delay: ${Math.random() * 3}s;
+        opacity: ${0.3 + Math.random() * 0.7};
+      `;
+      container.appendChild(star);
+    }
+  }
+
+  // ════════════════════════════════════════════
+  //  DATA LOADING
+  // ════════════════════════════════════════════
+  async function loadData() {
+    try {
+      const res = await fetch('/news/data/news.json');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      allNews = await res.json();
+      initUI();
+    } catch (e) {
+      document.getElementById('news-grid').innerHTML = `
+        <div class="state-box">
+          <span class="state-icon">⚠️</span>
+          <div class="state-title">GAME OVER</div>
+          <div class="state-sub">
+            데이터를 불러올 수 없습니다<br><br>
+            먼저 fetch_news.py를 실행해주세요:<br>
+            <br>
+            uv run fetch_news.py<br>
+            <br>
+            또는<br>
+            python fetch_news.py
+          </div>
+        </div>`;
+    }
+  }
+
+  // ════════════════════════════════════════════
+  //  HELPERS
+  // ════════════════════════════════════════════
+  function esc(str) {
+    return String(str ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#039;');
+  }
+
+  function formatDate(dateStr) {
+    if (!dateStr) return '----/--/--';
+    try {
+      const d = new Date(dateStr);
+      if (isNaN(d)) return dateStr.slice(0, 16);
+      return [
+        d.getFullYear(),
+        String(d.getMonth() + 1).padStart(2, '0'),
+        String(d.getDate()).padStart(2, '0'),
+      ].join('-');
+    } catch { return dateStr.slice(0, 16); }
+  }
+
+  function shortUrl(url, max = 55) {
+    if (url.length <= max) return url;
+    try {
+      const u = new URL(url);
+      const path = u.pathname.length > 28
+        ? u.pathname.slice(0, 28) + '…'
+        : u.pathname;
+      return u.hostname + path;
+    } catch { return url.slice(0, max) + '…'; }
+  }
+
+  function getCatKey(category) {
+    if (!category) return 'other';
+    if (category.includes('프로젝트')) return 'project';
+    if (category.includes('경제'))    return 'economy';
+    if (category.includes('아이디어')) return 'idea';
+    if (category.includes('처리해야')) return 'todo';
+    return 'other';
+  }
+
+  function getCatLabel(catKey) {
+    return {
+      project: '🚀 프로젝트',
+      economy: '📈 경제뉴스',
+      idea:    '💡 아이디어',
+      todo:    '✅ 할일',
+      other:   '📌 기타'
+    }[catKey] ?? '📌 기타';
+  }
+
+  function getAllTagCounts() {
+    const counts = {};
+    allNews.forEach(item => {
+      (item.tags ?? []).forEach(tag => { counts[tag] = (counts[tag] ?? 0) + 1; });
+    });
+    return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  }
+
+  // ════════════════════════════════════════════
+  //  RENDERING
+  // ════════════════════════════════════════════
+  function renderCard(item) {
+    const catKey   = getCatKey(item.category);
+    const catLabel = getCatLabel(catKey);
+    const safeId   = esc(item.id);
+
+    const urlsHtml = (item.urls ?? []).length
+      ? `<div class="card-urls">
+           <div class="section-label">LINKS</div>
+           ${(item.urls ?? []).map(u =>
+             `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer" class="url-link"
+                title="${esc(u)}">${esc(shortUrl(u))}</a>`
+           ).join('')}
+         </div>`
+      : '';
+
+    const summaryHtml = (item.summary ?? '').trim()
+      ? `<div class="card-summary">
+           <div class="section-label">SUMMARY</div>
+           <div class="summary-text" id="sum-${safeId}">${esc(item.summary)}</div>
+         </div>`
+      : '';
+
+    const opinionHtml = (item.opinion ?? '').trim()
+      ? `<div class="card-opinion">
+           <div class="section-label opinion-lbl">OPINION</div>
+           <div class="opinion-text" id="opi-${safeId}">${esc(item.opinion)}</div>
+         </div>`
+      : '';
+
+    const tagsHtml = (item.tags ?? []).length
+      ? `<div class="card-tags">
+           ${(item.tags ?? []).map(tag =>
+             `<span class="tag-chip${activeTags.has(tag) ? ' active' : ''}"
+                    onclick="toggleTag('${esc(tag)}')">${esc(tag)}</span>`
+           ).join('')}
+         </div>`
+      : '';
+
+    return `
+      <article class="news-card cat-${catKey}" data-id="${safeId}"
+               onclick="handleCardClick(event,'${safeId}')">
+        <div class="card-header">
+          <span class="cat-badge ${catKey}">${catLabel}</span>
+          <span class="card-date">${formatDate(item.date)}</span>
+        </div>
+        <div class="card-body">
+          <div class="card-subject">${esc(item.subject ?? '')}</div>
+          ${urlsHtml}
+          ${summaryHtml}
+          ${opinionHtml}
+          ${tagsHtml}
+        </div>
+        <div class="card-footer">
+          <button class="expand-btn" onclick="event.stopPropagation();toggleExpand('${safeId}')">▼ MORE</button>
+        </div>
+      </article>`;
+  }
+
+  function renderNews() {
+    const filtered = getFiltered();
+    const grid = document.getElementById('news-grid');
+    document.getElementById('results-count').textContent = filtered.length;
+    renderActiveFilters();
+
+    if (filtered.length === 0) {
+      grid.innerHTML = `
+        <div class="state-box">
+          <span class="state-icon" style="animation:blink 1s step-end infinite">👾</span>
+          <div class="state-title">GAME OVER</div>
+          <div class="state-sub">검색 결과가 없습니다<br>다른 키워드를 시도해보세요</div>
+        </div>`;
+      return;
+    }
+
+    grid.innerHTML = filtered.map(renderCard).join('');
+  }
+
+  function renderTagCloud() {
+    const cloud = document.getElementById('tag-cloud');
+    const tags = getAllTagCounts();
+    document.getElementById('stat-tags').textContent = tags.length;
+    cloud.innerHTML = `<span class="tc-label">POWER-UPS:</span>` +
+      tags.map(([tag, cnt]) =>
+        `<button class="tag-btn${activeTags.has(tag) ? ' active' : ''}"
+                 data-tag="${esc(tag)}"
+                 onclick="toggleTag('${esc(tag)}')">${esc(tag)}<span class="tag-count">(${cnt})</span></button>`
+      ).join('');
+  }
+
+  function renderActiveFilters() {
+    const af = document.getElementById('active-filters');
+    const chips = [];
+    if (searchQuery) chips.push(`<span class="active-filter-chip" onclick="clearSearch()">"${esc(searchQuery)}"</span>`);
+    activeTags.forEach(tag => chips.push(`<span class="active-filter-chip" onclick="toggleTag('${esc(tag)}')">#${esc(tag)}</span>`));
+    af.innerHTML = chips.join('');
+  }
+
+  // ════════════════════════════════════════════
+  //  FILTERING
+  // ════════════════════════════════════════════
+  function getFiltered() {
+    return allNews.filter(item => {
+      if (activeCategory !== 'all' && item.category !== activeCategory) return false;
+
+      if (activeTags.size) {
+        const itemTagSet = new Set(item.tags ?? []);
+        for (const t of activeTags) if (!itemTagSet.has(t)) return false;
+      }
+
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const hay = [
+          item.subject ?? '',
+          item.summary ?? '',
+          item.opinion ?? '',
+          ...(item.urls ?? []),
+          ...(item.tags ?? []),
+        ].join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+
+      return true;
+    });
+  }
+
+  // ════════════════════════════════════════════
+  //  INTERACTIONS
+  // ════════════════════════════════════════════
+  function toggleTag(tag) {
+    if (activeTags.has(tag)) activeTags.delete(tag);
+    else activeTags.add(tag);
+    renderTagCloud();
+    renderNews();
+  }
+
+  function clearSearch() {
+    searchQuery = '';
+    document.getElementById('search-input').value = '';
+    renderNews();
+  }
+
+  function toggleExpand(id) {
+    const card = document.querySelector(`[data-id="${id}"]`);
+    const sum  = document.getElementById(`sum-${id}`);
+    const opi  = document.getElementById(`opi-${id}`);
+    const btn  = card ? card.querySelector('.expand-btn') : null;
+    if (!card) return;
+
+    const expanded = card.classList.toggle('card-expanded');
+    if (sum) sum.classList.toggle('expanded', expanded);
+    if (opi) opi.classList.toggle('expanded', expanded);
+    if (btn) btn.textContent = expanded ? '▲ LESS' : '▼ MORE';
+    // 고정 높이 해제/복원
+    card.style.height = expanded ? 'auto' : '';
+    card.style.minHeight = expanded ? '400px' : '';
+  }
+
+  // ════════════════════════════════════════════
+  //  TICKER UPDATE
+  // ════════════════════════════════════════════
+  function updateTicker() {
+    const subjects = allNews.map(n => n.subject ?? '').filter(Boolean);
+    const tickerText = subjects.length
+      ? subjects.map(s => `★ ${s}`).join('  ') + '  '
+      : '★ NEWS ARCADE ★ fetch_news.py를 실행하여 뉴스를 불러오세요 ★';
+    document.getElementById('ticker-text').textContent = tickerText;
+  }
+
+  // ════════════════════════════════════════════
+  //  CARD CLICK → MODAL
+  // ════════════════════════════════════════════
+  function handleCardClick(e, id) {
+    // 링크 클릭, 버튼 클릭, 태그 칩 클릭은 모달 열지 않음
+    if (e.target.closest('a') || e.target.closest('button') || e.target.closest('.tag-chip')) return;
+    openModal(id);
+  }
+
+  function openModal(id) {
+    const item = allNews.find(n => String(n.id) === String(id));
+    if (!item) return;
+
+    const catKey   = getCatKey(item.category);
+    const catLabel = getCatLabel(catKey);
+
+    const urlsHtml = (item.urls ?? []).length
+      ? `<div class="modal-section">
+           <div class="modal-section-title">▶ LINKS</div>
+           ${(item.urls ?? []).map(u =>
+             `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer"
+                 class="modal-url-link" onclick="event.stopPropagation()">${esc(u)}</a>`
+           ).join('')}
+         </div>`
+      : '';
+
+    const summaryHtml = (item.summary ?? '').trim()
+      ? `<div class="modal-section">
+           <div class="modal-section-title">▶ SUMMARY</div>
+           <div class="modal-text">${esc(item.summary)}</div>
+         </div>`
+      : '';
+
+    const opinionHtml = (item.opinion ?? '').trim()
+      ? `<div class="modal-section">
+           <div class="modal-section-title opinion">▶ OPINION</div>
+           <div class="modal-opinion-text">${esc(item.opinion)}</div>
+         </div>`
+      : '';
+
+    const tagsHtml = (item.tags ?? []).length
+      ? `<div class="modal-section">
+           <div class="modal-section-title tags-lbl">▶ TAGS</div>
+           <div class="modal-tags">
+             ${(item.tags ?? []).map(tag =>
+               `<span class="tag-chip${activeTags.has(tag) ? ' active' : ''}"
+                      onclick="event.stopPropagation();toggleTag('${esc(tag)}')">${esc(tag)}</span>`
+             ).join('')}
+           </div>
+         </div>`
+      : '';
+
+    document.getElementById('modal-content').innerHTML = `
+      <div class="modal-header">
+        <span class="cat-badge ${catKey}">${catLabel}</span>
+        <span class="modal-meta" style="font-size:13px;color:#888">${formatDate(item.date)}</span>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-body">
+        <div class="modal-subject">${esc(item.subject ?? '')}</div>
+        ${item.from ? `<div class="modal-meta">From: ${esc(item.from)}</div>` : ''}
+        ${urlsHtml}
+        ${summaryHtml}
+        ${opinionHtml}
+        ${tagsHtml}
+      </div>`;
+
+    const overlay = document.getElementById('modal-overlay');
+    overlay.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  // ════════════════════════════════════════════
+  //  INIT
+  // ════════════════════════════════════════════
+  function initUI() {
+    // Stats
+    document.getElementById('stat-total').textContent   = allNews.length;
+    document.getElementById('stat-project').textContent = allNews.filter(n => n.category === '좋은 프로젝트').length;
+    document.getElementById('stat-economy').textContent = allNews.filter(n => n.category === '경제 뉴스 정리').length;
+    document.getElementById('stat-idea').textContent    = allNews.filter(n => n.category === '아이디어').length;
+    document.getElementById('stat-todo').textContent    = allNews.filter(n => n.category === '처리해야 할 일').length;
+
+    updateTicker();
+    renderTagCloud();
+
+    // Category buttons
+    document.querySelectorAll('.cat-btn[data-category]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeCategory = btn.dataset.category;
+        renderNews();
+      });
+    });
+
+    // Search
+    const searchInput = document.getElementById('search-input');
+    let searchTimer;
+    searchInput.addEventListener('input', e => {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        searchQuery = e.target.value.trim();
+        renderNews();
+      }, 200);
+    });
+    searchInput.addEventListener('keydown', e => {
+      if (e.key === 'Escape') clearSearch();
+    });
+
+    // Clear button
+    document.getElementById('clear-btn').addEventListener('click', () => {
+      clearSearch();
+      activeTags.clear();
+      activeCategory = 'all';
+      document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
+      document.querySelector('.cat-btn[data-category="all"]').classList.add('active');
+      renderTagCloud();
+      renderNews();
+    });
+
+    renderNews();
+  }
+
+  // ════════════════════════════════════════════
+  //  BOOT
+  // ════════════════════════════════════════════
+  initStars();
+  loadData();
+
+  // 모달 외부 클릭 닫기 & ESC 키 닫기
+  document.getElementById('modal-overlay').addEventListener('click', e => {
+    if (e.target === document.getElementById('modal-overlay')) closeModal();
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeModal();
+  });
+</script>
+
+<!-- ═══ MODAL ═══ -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal-box" id="modal-content">
+  </div>
+</div>
+
+</body>
+</html>
