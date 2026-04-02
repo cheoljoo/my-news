@@ -30,5 +30,15 @@ description: "일을 정리 해주세요" 트리거 — README, worklog, lessons
   - 교훈 내용
   ```
 
+## 작업 4 — mm.md에 commit msg 기록
+- 아래 형식에 맞게 commit msg를 한다. 
+- 파일이 있으면 새로 생성시킨다.
+- 형식: 
+```
+짧은 summary 1줄
+
+상세한 내용
+```
+
 ## 공통 규칙
 - git add / commit / push 는 하지 않는다. 사용자가 직접 처리한다.
