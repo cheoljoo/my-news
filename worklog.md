@@ -2,6 +2,18 @@
 
 ---
 
+## 2026-04-02 (2차)
+
+### Copilot CLI instructions 학습 및 skills.md 작성
+- Copilot CLI는 `~/.github/instructions/`를 자동 인식하지 않음 확인
+- CLI 전역 instructions 적용 방법 2가지 정리:
+  - `~/.copilot/copilot-instructions.md` 단일 파일
+  - `COPILOT_CUSTOM_INSTRUCTIONS_DIRS` 환경변수로 디렉토리 지정 (권장)
+- VS Code는 User settings `github.copilot.chat.instructionFiles`로 `~/.github/instructions/` 전역 등록 가능
+- `skills.md` 신규 작성: VS Code / Copilot CLI 환경별 instructions 설정 가이드
+
+---
+
 ## 2026-04-02
 
 ### 웹 UI 개선

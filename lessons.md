@@ -4,6 +4,23 @@
 
 ---
 
+## 2026-04-02 — Copilot CLI instructions 인식 범위
+
+**문제**: `.github/copilot-instructions.md`에 `~/.github/instructions/` 경로를 텍스트로 언급해도,
+Copilot CLI는 해당 경로를 실제로 로드하지 않음. VS Code User settings는 CLI에 전달되지 않는다.
+
+**해결**: CLI에서 전역 스킬을 사용하려면 명시적 등록 필요:
+```bash
+# ~/.bashrc 또는 ~/.zshrc
+export COPILOT_CUSTOM_INSTRUCTIONS_DIRS="$HOME/.github/instructions"
+```
+
+**교훈**: VS Code의 `github.copilot.chat.instructionFiles` 설정은 CLI와 공유되지 않는다.
+두 환경을 동시에 지원하려면 환경변수 방식이 가장 관리하기 쉽다.
+`/instructions` 명령으로 현재 로드된 파일 목록을 언제든지 확인할 수 있다.
+
+---
+
 ## 2026-04-02 — 모달 외부 클릭 닫기와 stopPropagation
 
 **문제**: modal-overlay 클릭으로 모달을 닫으려 할 때, modal-box가 overlay 안에 있어서
