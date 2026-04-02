@@ -64,8 +64,8 @@
       to   { background-position: 0 100%; }
     }
     @keyframes marqueeScroll {
-      from { transform: translateX(100%); }
-      to   { transform: translateX(-100%); }
+      from { transform: translateX(0); }
+      to   { transform: translateX(-50%); }
     }
     @keyframes pixelSpin {
       0%   { transform: rotate(0deg)   scale(1);    }
@@ -162,7 +162,7 @@
       background: #000;
       border-top: 2px solid var(--yellow);
       border-bottom: 2px solid var(--yellow);
-      padding: 6px 0;
+      padding: 8px 0;
       overflow: hidden;
       white-space: nowrap;
       font-size: 12px;
@@ -170,8 +170,10 @@
     }
     .ticker-inner {
       display: inline-block;
-      animation: marqueeScroll 20s linear infinite;
+      animation: marqueeScroll 360s linear infinite;
     }
+    .ticker-quote { margin: 0 60px; }
+    .ticker-sep   { color: #555; margin: 0 10px; }
 
     /* ═══════════════════════════════════════════════
        CONTROLS BAR
@@ -759,6 +761,37 @@
     .footer-line { margin-bottom: 8px; }
 
     /* ═══════════════════════════════════════════════
+       PAGINATION
+    ═══════════════════════════════════════════════ */
+    .pagination {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+      padding: 24px 20px;
+      flex-wrap: wrap;
+    }
+    .page-btn {
+      background: #000;
+      border: 2px solid #444;
+      color: #888;
+      font-family: 'Press Start 2P', monospace;
+      font-size: 12px;
+      padding: 8px 14px;
+      cursor: pointer;
+      transition: all 0.1s;
+    }
+    .page-btn:hover:not(:disabled) { border-color: var(--yellow); color: var(--yellow); }
+    .page-btn:disabled { opacity: 0.25; cursor: default; }
+    .page-btn.active   { background: #1a1a00; border-color: var(--yellow); color: var(--yellow); }
+    .page-info {
+      font-size: 11px;
+      color: #666;
+      font-family: 'Press Start 2P', monospace;
+    }
+    .page-numbers { display: flex; gap: 6px; }
+
+    /* ═══════════════════════════════════════════════
        RESPONSIVE
     ═══════════════════════════════════════════════ */
     @media (max-width: 640px) {
@@ -829,6 +862,7 @@
 <!-- ═══ RESULTS BAR ═══ -->
 <div class="results-bar">
   <span>RESULTS: <span class="results-count" id="results-count">0</span></span>
+  <span class="page-info" id="page-info"></span>
   <div class="active-filters" id="active-filters"></div>
 </div>
 
@@ -841,7 +875,8 @@
   </div>
 </main>
 
-<!-- ═══ FOOTER ═══ -->
+<!-- ═══ PAGINATION ═══ -->
+<div class="pagination" id="pagination"></div>
 <footer class="footer">
   <div class="footer-line">© NEWS ARCADE — POWERED BY GMAIL API</div>
   <div class="footer-line" style="color:#111">▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓▓</div>
@@ -856,6 +891,8 @@
   let activeCategory = 'all';
   let activeTags = new Set();
   let searchQuery = '';
+  let currentPage = 0;
+  const PAGE_SIZE = 18;
 
   // ════════════════════════════════════════════
   //  PIXEL STARS
@@ -974,13 +1011,15 @@
     const catLabel = getCatLabel(catKey);
     const safeId   = esc(item.id);
 
-    const urlsHtml = (item.urls ?? []).length
+    const urls3 = (item.urls ?? []).slice(0, 3);
+    const urlsHtml = urls3.length
       ? `<div class="card-urls">
            <div class="section-label">LINKS</div>
-           ${(item.urls ?? []).map(u =>
+           ${urls3.map(u =>
              `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer" class="url-link"
-                title="${esc(u)}">${esc(shortUrl(u))}</a>`
+                title="${esc(u)}" onclick="event.stopPropagation()">${esc(shortUrl(u))}</a>`
            ).join('')}
+           ${(item.urls ?? []).length > 3 ? `<span style="font-size:11px;color:#555;padding-left:6px">+${(item.urls ?? []).length - 3}개 더...</span>` : ''}
          </div>`
       : '';
 
@@ -1029,21 +1068,68 @@
 
   function renderNews() {
     const filtered = getFiltered();
-    const grid = document.getElementById('news-grid');
-    document.getElementById('results-count').textContent = filtered.length;
+    const total    = filtered.length;
+    const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+    currentPage = Math.min(currentPage, totalPages - 1);
+
+    document.getElementById('results-count').textContent = total;
+    const start = currentPage * PAGE_SIZE;
+    const end   = Math.min(start + PAGE_SIZE, total);
+    document.getElementById('page-info').textContent =
+      total > 0 ? `${start + 1}-${end} / ${total}` : '';
     renderActiveFilters();
 
-    if (filtered.length === 0) {
-      grid.innerHTML = `
+    if (total === 0) {
+      document.getElementById('news-grid').innerHTML = `
         <div class="state-box">
           <span class="state-icon" style="animation:blink 1s step-end infinite">👾</span>
           <div class="state-title">GAME OVER</div>
           <div class="state-sub">검색 결과가 없습니다<br>다른 키워드를 시도해보세요</div>
         </div>`;
+      document.getElementById('pagination').innerHTML = '';
       return;
     }
 
-    grid.innerHTML = filtered.map(renderCard).join('');
+    document.getElementById('news-grid').innerHTML =
+      filtered.slice(start, end).map(renderCard).join('');
+
+    renderPagination(totalPages);
+    // 페이지 전환시 상단으로
+    document.getElementById('news-grid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  function renderPagination(totalPages) {
+    if (totalPages <= 1) { document.getElementById('pagination').innerHTML = ''; return; }
+    const pg = document.getElementById('pagination');
+    const maxVisible = 7;
+    let pages = [];
+    if (totalPages <= maxVisible) {
+      pages = Array.from({length: totalPages}, (_, i) => i);
+    } else {
+      const left  = Math.max(0, currentPage - 2);
+      const right = Math.min(totalPages - 1, currentPage + 2);
+      if (left > 0)            pages.push(0, '…');
+      for (let i = left; i <= right; i++) pages.push(i);
+      if (right < totalPages - 1) pages.push('…', totalPages - 1);
+    }
+    pg.innerHTML = `
+      <button class="page-btn" onclick="goPage(${currentPage - 1})" ${currentPage === 0 ? 'disabled' : ''}>◀ PREV</button>
+      <div class="page-numbers">
+        ${pages.map(p => p === '…'
+          ? `<span class="page-info">…</span>`
+          : `<button class="page-btn${p === currentPage ? ' active' : ''}" onclick="goPage(${p})">${p + 1}</button>`
+        ).join('')}
+      </div>
+      <button class="page-btn" onclick="goPage(${currentPage + 1})" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>NEXT ▶</button>
+    `;
+  }
+
+  function goPage(p) {
+    const filtered = getFiltered();
+    const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+    if (p < 0 || p >= totalPages) return;
+    currentPage = p;
+    renderNews();
   }
 
   function renderTagCloud() {
@@ -1100,12 +1186,14 @@
   function toggleTag(tag) {
     if (activeTags.has(tag)) activeTags.delete(tag);
     else activeTags.add(tag);
+    currentPage = 0;
     renderTagCloud();
     renderNews();
   }
 
   function clearSearch() {
     searchQuery = '';
+    currentPage = 0;
     document.getElementById('search-input').value = '';
     renderNews();
   }
@@ -1127,14 +1215,45 @@
   }
 
   // ════════════════════════════════════════════
-  //  TICKER UPDATE
+  //  TICKER — 세계 명언
   // ════════════════════════════════════════════
+  const QUOTES = [
+    { q: "인생은 자전거를 타는 것과 같다. 균형을 잡으려면 계속 움직여야 한다.", a: "알베르트 아인슈타인" },
+    { q: "The only way to do great work is to love what you do.", a: "Steve Jobs" },
+    { q: "천 리 길도 한 걸음부터.", a: "노자" },
+    { q: "In the middle of every difficulty lies opportunity.", a: "Albert Einstein" },
+    { q: "꿈을 꾸는 사람은 오직 달빛에만 길을 찾을 수 있다.", a: "오스카 와일드" },
+    { q: "It does not matter how slowly you go as long as you do not stop.", a: "Confucius" },
+    { q: "성공은 최종 목적지가 아니고, 실패는 치명적이지 않다. 중요한 것은 계속하려는 용기다.", a: "윈스턴 처칠" },
+    { q: "The future belongs to those who believe in the beauty of their dreams.", a: "Eleanor Roosevelt" },
+    { q: "지금 하지 않으면 언제 할 것인가?", a: "히포크라테스" },
+    { q: "Imagination is more important than knowledge.", a: "Albert Einstein" },
+    { q: "넘어지는 것이 실패가 아니라, 넘어진 채로 있는 것이 실패다.", a: "공자" },
+    { q: "Do what you can, with what you have, where you are.", a: "Theodore Roosevelt" },
+    { q: "고통 없이 얻는 것은 없다.", a: "벤저민 프랭클린" },
+    { q: "Two roads diverged in a wood, and I took the one less traveled by.", a: "Robert Frost" },
+    { q: "시작이 반이다.", a: "아리스토텔레스" },
+    { q: "Be the change you wish to see in the world.", a: "Mahatma Gandhi" },
+    { q: "배움에는 끝이 없다.", a: "레오나르도 다빈치" },
+    { q: "Life is what happens when you're busy making other plans.", a: "John Lennon" },
+    { q: "작은 일에 충실한 자가 큰 일에도 충실하다.", a: "성경 누가복음" },
+    { q: "Whether you think you can or you think you can't, you're right.", a: "Henry Ford" },
+    { q: "기회는 준비된 자에게만 찾아온다.", a: "루이 파스퇴르" },
+    { q: "The only limit to our realization of tomorrow is our doubts of today.", a: "F.D. Roosevelt" },
+    { q: "실수는 발견의 포털이다.", a: "제임스 조이스" },
+    { q: "In three words I can sum up everything I've learned about life: it goes on.", a: "Robert Frost" },
+    { q: "지식에 투자하는 것이 최고의 이익을 낸다.", a: "벤저민 프랭클린" },
+    { q: "You miss 100% of the shots you don't take.", a: "Wayne Gretzky" },
+    { q: "어제보다 나은 오늘을 살아라.", a: "부처" },
+    { q: "Stay hungry, stay foolish.", a: "Steve Jobs" },
+  ];
+
   function updateTicker() {
-    const subjects = allNews.map(n => n.subject ?? '').filter(Boolean);
-    const tickerText = subjects.length
-      ? subjects.map(s => `★ ${s}`).join('  ') + '  '
-      : '★ NEWS ARCADE ★ fetch_news.py를 실행하여 뉴스를 불러오세요 ★';
-    document.getElementById('ticker-text').textContent = tickerText;
+    const items = [...QUOTES, ...QUOTES]; // 두 번 반복으로 끊김 없이
+    const html = items.map(({ q, a }) =>
+      `<span class="ticker-quote">❝ ${q} ❞ <span class="ticker-sep">— ${a}</span></span>`
+    ).join('');
+    document.getElementById('ticker-text').innerHTML = html;
   }
 
   // ════════════════════════════════════════════
@@ -1234,6 +1353,7 @@
         document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         activeCategory = btn.dataset.category;
+        currentPage = 0;
         renderNews();
       });
     });
@@ -1245,6 +1365,7 @@
       clearTimeout(searchTimer);
       searchTimer = setTimeout(() => {
         searchQuery = e.target.value.trim();
+        currentPage = 0;
         renderNews();
       }, 200);
     });
@@ -1257,6 +1378,7 @@
       clearSearch();
       activeTags.clear();
       activeCategory = 'all';
+      currentPage = 0;
       document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));
       document.querySelector('.cat-btn[data-category="all"]').classList.add('active');
       renderTagCloud();
@@ -1272,12 +1394,11 @@
   initStars();
   loadData();
 
-  // 모달 외부 클릭 닫기 & ESC 키 닫기
-  document.getElementById('modal-overlay').addEventListener('click', e => {
-    if (e.target === document.getElementById('modal-overlay')) closeModal();
-  });
+  // ESC / x / X 키로 모달 닫기
   document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeModal();
+    const overlay = document.getElementById('modal-overlay');
+    if (!overlay.classList.contains('open')) return;
+    if (e.key === 'Escape' || e.key === 'x' || e.key === 'X') closeModal();
   });
 </script>
 
