@@ -4,6 +4,48 @@
 
 ---
 
+## 2026-04-03 — Gmail Reply/Forward 인용 제거 전략
+
+**문제**: Reply/Forward 메일은 이전 내용이 누적되어 본문이 수십만 자까지 불어난다.
+단순 HTML 태그 제거만으로는 인용 블록이 그대로 남는다.
+
+**해결 2단계 전략**:
+1. **HTML 단계**: `gmail_attr`, `gmail_quote` div와 `blockquote` 태그를 마커(`\x00REPLY_CUT\x00`)로 치환 후 마커 이전만 남김. `.*?` 패턴 대신 마커 방식을 써야 중첩 div에서 안전하다.
+2. **Plain text 단계**: 한국어 `2026년 N월 N일 ... 님이 작성:` 패턴, `>` 인용 줄, 구분선(`---`, `___`) 순서로 감지해 이후 전체 제거.
+
+**교훈**: HTML과 Plain text 두 경로를 모두 처리해야 한다. `.*?` DOTALL 정규식은 중첩 태그에서 오작동하므로 마커 방식이 더 안전하다.
+
+---
+
+## 2026-04-03 — worklog 파일 크기 관리 전략
+
+**문제**: worklog.md / worklog.json 을 계속 append하면 파일이 무한정 커져 관리가 어려워진다.
+
+**해결**: 월별 분리 + 자동 아카이브 전략
+- `worklog.md` / `data/worklog.json` 은 **이번 달만** 유지
+- 매월 초 첫 "일을 정리해주세요" 시 지난달 파일을 `worklog/YYYY-MM.md`, `data/worklog/YYYY-MM.json` 으로 자동 이동
+- 전체 조회 필요 시 `"워크로그 통합해줘"` → `data/worklog_all.json` 생성
+
+**교훈**: 로그성 파일은 처음 설계할 때 분리/아카이브 전략을 포함해야 한다.
+나중에 파일이 커진 후 분리하면 기존 데이터 마이그레이션 비용이 발생한다.
+
+---
+
+## 2026-04-03 — AI 툴별 session_id로 작업 이력 추적
+
+**배경**: 한 사람이 Copilot CLI, Claude Code, VS Code Copilot 등 여러 AI 툴을 동시에 사용할 수 있다.
+각 툴은 독립적인 세션을 가지며, 같은 날 여러 툴로 작업하면 worklog가 분산된다.
+
+**해결**: worklog.json에 `tool` + `session_id` 필드 추가
+- 동일 세션 중복 기록 방지
+- 여러 툴의 기록을 날짜 기준으로 합산 가능
+- 어떤 툴로 어떤 작업을 했는지 사후 분석 가능
+
+**교훈**: 여러 도구를 병행 사용하는 환경에서는 출처(tool+session)를 메타데이터로 남겨야
+나중에 데이터를 의미있게 집계할 수 있다.
+
+---
+
 ## 2026-04-02 — Copilot CLI instructions 인식 범위
 
 **문제**: `.github/copilot-instructions.md`에 `~/.github/instructions/` 경로를 텍스트로 언급해도,

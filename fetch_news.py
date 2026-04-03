@@ -229,8 +229,23 @@ def decode_body(data: str) -> str:
 
 
 def strip_html(html_text: str) -> str:
-    """HTML 태그 제거 및 텍스트 정리."""
-    text = re.sub(r"<br\s*/?>", "\n", html_text, flags=re.IGNORECASE)
+    """HTML 태그 제거 및 텍스트 정리. Reply/Forward 인용 블록 먼저 제거."""
+    # gmail_attr (attribution "On ... wrote:" 줄) + gmail_quote (인용 블록) 마커로 표시 후 잘라냄
+    # 중첩 div에도 안전하게 동작하도록 closing tag 매칭 대신 마커 방식 사용
+    REPLY_MARKER = "\x00REPLY_CUT\x00"
+    text = re.sub(
+        r'<div[^>]+class=["\'][^"\']*gmail_attr[^"\']*["\'][^>]*>',
+        REPLY_MARKER, html_text, flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r'<div[^>]+class=["\'][^"\']*gmail_quote[^"\']*["\'][^>]*>',
+        REPLY_MARKER, text, flags=re.IGNORECASE,
+    )
+    text = re.sub(r"<blockquote[^>]*>", REPLY_MARKER, text, flags=re.IGNORECASE)
+    # 마커 이후 내용 제거
+    text = text.split(REPLY_MARKER)[0]
+
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
     text = re.sub(r"<p[^>]*>", "\n", text, flags=re.IGNORECASE)
     text = re.sub(r"</p>", "\n", text, flags=re.IGNORECASE)
     text = re.sub(r"<li[^>]*>", "\n• ", text, flags=re.IGNORECASE)
@@ -239,6 +254,97 @@ def strip_html(html_text: str) -> str:
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
     return text.strip()
+
+
+# Reply/Forward 구분선 패턴 (이 줄 이후 모두 제거)
+_QUOTE_SEPARATOR_RE = re.compile(
+    r"^("
+    r"-{3,}[\s]*(original message|forwarded message|원본 메시지|전달된 메시지)[\s]*-{3,}"
+    r"|_{5,}"
+    r"|={5,}"
+    r")",
+    re.IGNORECASE,
+)
+
+# 한국어 Gmail reply 헤더: "2026년 4월 1일 (수) PM 11:06, 홍길동 <email>님이 작성:"
+_KO_GMAIL_REPLY_RE = re.compile(
+    r"^\d{4}년\s*\d{1,2}월\s*\d{1,2}일.{0,80}(님이\s*작성|작성)\s*:\s*$",
+    re.IGNORECASE,
+)
+
+# 영어 Gmail reply 헤더: "On Wed, Apr 1, 2026 at 10:30 AM, Name <email> wrote:"
+# 여러 줄에 걸칠 수 있어 combined 방식으로 처리
+_ON_WROTE_RE = re.compile(
+    r"^on\s.{5,300}(wrote|작성)\s*:\s*$",
+    re.IGNORECASE,
+)
+
+# 이메일 주소 포함 reply 헤더 (날짜 + <email@domain> + :로 끝남)
+_EMAIL_HEADER_RE = re.compile(
+    r"^.{5,80}<[^@>]+@[^@>]+\.[^@>]+>.{0,30}:\s*$",
+)
+
+# `>` 인용 줄
+_QUOTE_LINE_RE = re.compile(r"^>")
+
+# 한국어 forwarded 헤더 키워드
+_KO_FWD_HEADER_RE = re.compile(
+    r"^(보낸\s*사람|받는\s*사람|발신|수신|날짜|제목|from|to|sent|date|subject)\s*:",
+    re.IGNORECASE,
+)
+
+
+def strip_quoted_text(body: str) -> str:
+    """Plain text에서 Reply/Forward 인용 부분 제거."""
+    result_lines: list[str] = []
+    lines = body.splitlines()
+    total = len(lines)
+    i = 0
+
+    while i < total:
+        line = lines[i]
+        stripped = line.strip()
+
+        # 1) 구분선 → 이후 전부 버림
+        if _QUOTE_SEPARATOR_RE.match(stripped):
+            break
+
+        # 2) 한국어 Gmail reply 헤더 → 이후 전부 버림
+        if _KO_GMAIL_REPLY_RE.match(stripped):
+            break
+
+        # 3) 이메일 주소 포함 헤더 (날짜 패턴 + <email>:) → 이후 전부 버림
+        if _EMAIL_HEADER_RE.match(stripped):
+            break
+
+        # 4) "On ... wrote:" (영어, 최대 3줄 합산 검사)
+        combined = stripped
+        lookahead = 0
+        while not combined.rstrip().endswith(":") and lookahead < 2 and (i + lookahead + 1) < total:
+            lookahead += 1
+            combined = combined + " " + lines[i + lookahead].strip()
+        if _ON_WROTE_RE.match(combined):
+            break
+
+        # 5) `>` 인용 줄 → 해당 줄만 건너뜀
+        if _QUOTE_LINE_RE.match(line):
+            i += 1
+            continue
+
+        # 6) 한국어 forwarded 헤더 연속 블록 (2줄 이상) → 이후 전부 버림
+        if _KO_FWD_HEADER_RE.match(stripped):
+            count = 0
+            j = i
+            while j < total and _KO_FWD_HEADER_RE.match(lines[j].strip()):
+                count += 1
+                j += 1
+            if count >= 2:
+                break
+
+        result_lines.append(line)
+        i += 1
+
+    return "\n".join(result_lines).strip()
 
 
 def get_message_text(service, message_id: str) -> tuple[str, str, str, str]:
@@ -266,6 +372,7 @@ def get_message_text(service, message_id: str) -> tuple[str, str, str, str]:
             html_text += decode_body(data)
 
     body = plain_text.strip() if plain_text.strip() else strip_html(html_text)
+    body = strip_quoted_text(body)
     return subject, sender, date_str, body
 
 

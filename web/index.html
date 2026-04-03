@@ -818,6 +818,7 @@
     <div class="stat">💡 아이디어: <span class="stat-val" id="stat-idea">--</span></div>
     <div class="stat">✅ 할일: <span class="stat-val" id="stat-todo">--</span></div>
     <div class="stat">🏷️ TAGS: <span class="stat-val" id="stat-tags">--</span></div>
+    <div class="stat">🕐 UPDATED: <span class="stat-val" id="stat-updated">--</span></div>
   </div>
 </header>
 
@@ -921,6 +922,17 @@
       const res = await fetch('/news/data/news.json');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       allNews = await res.json();
+      allNews.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+      const lm = res.headers.get('Last-Modified');
+      if (lm) {
+        const d = new Date(lm);
+        const pad = n => String(n).padStart(2, '0');
+        const str = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} `
+                  + `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        document.getElementById('stat-updated').textContent = str;
+      }
+
       initUI();
     } catch (e) {
       document.getElementById('news-grid').innerHTML = `
@@ -1394,11 +1406,14 @@
   initStars();
   loadData();
 
-  // ESC / x / X 키로 모달 닫기
+  // ESC / x / X / Space / Enter 키로 모달 닫기
   document.addEventListener('keydown', e => {
     const overlay = document.getElementById('modal-overlay');
     if (!overlay.classList.contains('open')) return;
-    if (e.key === 'Escape' || e.key === 'x' || e.key === 'X') closeModal();
+    if (e.key === 'Escape' || e.key === 'x' || e.key === 'X' || e.key === ' ' || e.key === 'Enter') {
+      e.preventDefault();
+      closeModal();
+    }
   });
 </script>
 

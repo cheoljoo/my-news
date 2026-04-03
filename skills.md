@@ -10,10 +10,15 @@ GitHub Copilot에 커스텀 지시사항(스킬)을 등록하는 방법을 VS Co
 |-----------|:-------:|:-----------:|------|
 | `CLAUDE.md` / `GEMINI.md` / `AGENTS.md` | ✅ | ✅ | 프로젝트 (git root & cwd) |
 | `.github/copilot-instructions.md` | ✅ | ✅ | 프로젝트 |
-| `.github/instructions/**/*.instructions.md` | ✅ | ✅ | 프로젝트 |
+| `.github/instructions/**/*.instructions.md` | ✅ | ✅ (**재시작 시**만 로드) | 프로젝트 |
 | `~/.copilot/copilot-instructions.md` | ❌ | ✅ | 전역 (CLI만) |
-| `~/.github/instructions/*.md` | ✅ (설정 필요) | ❌ | 전역 (VS Code만) |
+| `~/.github/instructions/*.md` | ✅ (설정 필요) | ❌ (스킬 불가) | 전역 (VS Code만) |
 | `COPILOT_CUSTOM_INSTRUCTIONS_DIRS` 환경변수 경로 | ❌ | ✅ | 전역 (CLI만) |
+
+> ⚠️ **Copilot CLI 스킬 주의사항**
+> - 스킬(`*.instructions.md`)은 **현재 프로젝트의 `.github/instructions/`** 안의 파일만 인식됩니다.
+> - `~/.github/instructions/`는 Copilot CLI에서 **스킬로 처리되지 않습니다** (VS Code 전용).
+> - 스킬 파일은 **Copilot CLI 재시작 시**에만 로드됩니다. 세션 도중 추가한 파일은 재시작 후 적용됩니다.
 
 ---
 
@@ -137,7 +142,21 @@ export COPILOT_CUSTOM_INSTRUCTIONS_DIRS="$HOME/.github/instructions"
 
 ---
 
-## 6. 요약 — 환경별 설정 체크리스트
+## 6. 음성 입력으로 Copilot CLI 사용하기
+
+Copilot CLI 자체는 음성 입력을 지원하지 않지만, **OS 레벨 음성 인식**을 통해 터미널에 텍스트로 입력할 수 있습니다.
+
+| OS | 단축키 | 방법 |
+|----|--------|------|
+| **Windows** | `Win + H` | Windows 음성 인식 — 터미널 포커스 상태에서 바로 입력 가능 ✅ 실사용 확인 |
+| **macOS** | `fn` 두 번 | 받아쓰기 기능 — 터미널에 바로 입력 가능 |
+| **Linux** | 별도 설정 필요 | `whisper` + `xdotool` 조합 등 |
+
+> **팁**: 터미널(Copilot CLI)에 포커스를 두고 단축키를 누르면 음성이 텍스트로 변환되어 바로 입력됩니다.
+
+---
+
+## 7. 요약 — 환경별 설정 체크리스트
 
 ### VS Code
 - [ ] `~/.github/instructions/` 에 전역 `.instructions.md` 파일 작성

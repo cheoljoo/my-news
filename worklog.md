@@ -2,6 +2,44 @@
 
 ---
 
+## 2026-04-03 ~12:07 [tool: copilot-cli / session: de842a4e]
+
+### fetch_news.py — Reply/Forward 인용 제거
+- HTML: `gmail_attr`, `gmail_quote` div, `blockquote` 마커 방식으로 안전하게 제거
+- Plain text: 한국어 Gmail reply 헤더(`2026년 N월 N일 ... 님이 작성:`) 감지 추가
+- Plain text: 이메일 주소 포함 헤더(`<email@domain>:`) 감지 추가
+- 기존 `news.json` 53개 항목 즉시 재처리 (최대 140,714→2,017 chars 감소)
+
+### web/index.html — 모달 닫기 키 추가
+- ESC / x / X 에 **Space / Enter** 추가
+- `e.preventDefault()` 적용으로 모달 내 스크롤/버튼 오작동 방지
+
+
+- Copilot CLI 스킬은 **현재 프로젝트의 `.github/instructions/`** 파일만 인식
+- 스킬 파일은 **Copilot CLI 재시작 시에만** 로드됨 (세션 도중 추가 불가)
+- skills.md 표 및 주의사항 업데이트
+
+---
+
+## 2026-04-03 10:00 ~ 11:07 (1h 7m) [tool: copilot-cli / session: de842a4e]
+
+### worklog 스킬 고도화
+- worklog.instructions.md: 시간 기록 (start/end/duration) 추가
+- worklog.instructions.md: tool 및 session_id 기록 추가 (copilot-cli, claude-code, vscode-copilot 구분)
+- worklog.instructions.md: 월별 아카이브 전략 추가 (매월 초 자동 분리)
+- data/worklog.json 초기 파일 생성 (`[]`)
+- worklog/, data/worklog/ 아카이브 디렉토리 생성
+
+### skills.md 보완
+- 6번 섹션 추가: 음성 입력으로 Copilot CLI 사용하기
+- Windows + H (음성 인식) 실사용 확인 내용 기록
+
+### web UI 개선
+- 카드 표시 순서: date 기준 내림차순 정렬 (최신 → 오래된 순)
+- 헤더 stats에 🕐 UPDATED 표시 추가 (news.json Last-Modified 기준)
+
+---
+
 ## 2026-04-02 (2차)
 
 ### Copilot CLI instructions 학습 및 skills.md 작성

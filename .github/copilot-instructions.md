@@ -10,6 +10,5 @@
 - **서버**: nginx (port 80), `/etc/nginx/sites-available/news-arcade`
 
 > 프로젝트 스킬은 `.github/instructions/` 폴더의 파일을 참고하세요.
-> 공통 스킬(worklog 정리, git commit 규칙)은 `~/.github/instructions/`에 있으며 VS Code User settings로 전역 적용됩니다.
 > git commit은 직접 하지 않습니다. 사용자가 수동으로 처리합니다.
 > python을 실행시 uv run 을 사용해주세요.
