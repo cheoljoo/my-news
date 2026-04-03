@@ -23,11 +23,16 @@ description: "일을 정리 해주세요" 트리거 — README, worklog, lessons
 
 ---
 
-## 사전 단계 B — 작업 시간 및 툴 정보 확인
+## 사전 단계 B — 작업 시간 및 툴 정보 자동 감지
 
-1. **작업 시작 시간**: 
-  - 시작 시간을 copilot의 입력된 시간으로 산출
-  - 일이 여러가지로 변하면 입력한 기준으로 변화 시작 시간으로 산정
+> **시간은 수동 입력 없이 `<current_datetime>` 태그에서 자동 추출한다.**
+
+1. **작업 시간 자동 산출**:
+   - **세션 시작 시간**: 대화에서 가장 첫 번째 `<current_datetime>` 값 (UTC→KST +9h 변환)
+   - **세션 종료 시간**: "일을 정리 해주세요" 메시지의 `<current_datetime>` 값 (UTC→KST +9h 변환)
+   - **개별 작업 시간**: 각 작업(task)이 시작/완료된 시점의 `<current_datetime>` 값으로 산출
+   - `<current_datetime>` 이 없거나 알 수 없으면 `"HH:MM"` 대신 `"unknown"` 으로 기록
+   - duration 계산: 종료 - 시작 (분 단위 계산 후 `Xh Ym` 형식)
 
 2. **툴 및 세션 ID** 자동 감지:
    - Copilot CLI → `tool: "copilot-cli"`, session_id: 현재 세션 ID

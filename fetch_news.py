@@ -10,9 +10,11 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
 import html as html_module
 import json
 import re
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 from urllib.parse import parse_qs, urlparse
@@ -25,11 +27,118 @@ from googleapiclient.errors import HttpError
 
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 
-TARGET_SUBJECTS = ["좋은 프로젝트", "경제 뉴스 정리", "아이디어", "처리해야 할 일"]
+# ── Emoji 목록 (250개) ───────────────────────────────────────────────────────
+# fetch.config.json 의 "emoji" 필드에 숫자로 지정 가능 (예: "emoji": 130)
+# emoji_list.txt 파일을 참조하면 전체 목록과 인덱스를 확인할 수 있다
+EMOJI_LIST: list[str] = [
+    # 0-9   스마일/행복
+    "😀","😃","😄","😁","😆","😅","🤣","😂","🙂","😊",
+    # 10-19  긍정적 얼굴
+    "😇","🥰","😍","🤩","😘","😋","😛","😜","🤪","😝",
+    # 20-29  중립/부정 얼굴
+    "🤑","🤗","🤔","🤐","😐","😑","😶","😏","😒","🙄",
+    # 30-39  손/제스처
+    "👍","👎","👋","🤚","✋","🖖","👌","✌️","🤞","👏",
+    # 40-49  더 많은 제스처
+    "🙌","🤝","🙏","💪","👈","👉","👆","👇","✍️","🫶",
+    # 50-59  동물 - 육지
+    "🐶","🐱","🐭","🐰","🦊","🐻","🐼","🐨","🐯","🦁",
+    # 60-69  동물 - 새/기타
+    "🐮","🐷","🐸","🐵","🐔","🐧","🐦","🦆","🦅","🦉",
+    # 70-79  식물/자연
+    "🌸","🌺","🌻","🌹","🍀","🌿","🍃","🌱","🌲","🌳",
+    # 80-89  과일
+    "🍎","🍊","🍋","🍇","🍓","🍒","🍑","🍍","🥑","🍅",
+    # 90-99  음식
+    "🍕","🍔","🌮","🍣","🍱","🍝","🍰","🎂","🍩","☕",
+    # 100-109 기술
+    "💻","🖥️","📱","⌨️","💾","💡","🔬","🔭","📡","🎮",
+    # 110-119 문서/정보
+    "📖","📚","📝","✏️","📌","📎","🔍","📊","📈","📉",
+    # 120-129 비즈니스/보안
+    "💰","💳","💸","🏆","🥇","🎯","📂","🗂️","🔑","🔒",
+    # 130-139 이동/여행
+    "🚀","✈️","🚂","🚗","🛸","⚓","🌍","🌎","🌏","🏠",
+    # 140-149 건물/장소
+    "🏢","🏦","🏥","⛪","🏋️","🎪","🎡","🎭","🎨","🎬",
+    # 150-159 날씨/하늘
+    "☀️","🌙","⭐","🌟","✨","💫","⚡","❄️","🌊","🔥",
+    # 160-169 색깔/감정
+    "❤️","🧡","💛","💚","💙","💜","🖤","🤍","🌈","💥",
+    # 170-179 스포츠/음악
+    "🎤","🎵","🎶","🎲","⚽","🏀","🎾","⚾","🏈","🎳",
+    # 180-189 도구
+    "🔧","🔨","⚙️","🛠️","🔩","🪛","🔋","🔌","🧲","🪝",
+    # 190-199 과학/의료
+    "🧪","🧫","🧬","⚗️","🩺","💊","🧠","🦷","👁️","👂",
+    # 200-209 기호/알림
+    "🚩","✅","❌","⚠️","🔔","📢","💯","♾️","♻️","🔄",
+    # 210-219 시간
+    "⏰","⏱️","⏲️","🕐","📅","📆","🗓️","⌚","⏳","🕰️",
+    # 220-229 축하/이벤트
+    "🎉","🎊","🎁","🎈","🪄","🔮","👾","🤖","🎃","🎄",
+    # 230-239 장난감/오브젝트
+    "🪴","🧸","🪆","🎀","🧩","🪀","🪁","🎠","🪅","🎢",
+    # 240-249 커뮤니케이션/기타
+    "💬","💭","🗣️","👤","🏷️","📣","🔖","🗺️","🧭","🗝️",
+]
+
+
+def resolve_emoji(value: str | int) -> str:
+    """'emoji' 필드값 해석: 정수면 EMOJI_LIST[n], 문자열이면 그대로 반환."""
+    if isinstance(value, int):
+        if 0 <= value < len(EMOJI_LIST):
+            return EMOJI_LIST[value]
+        return "📌"
+    return str(value) if value else "📌"
 
 DATA_DIR = Path("data")
 NEWS_FILE = DATA_DIR / "news.json"
 PROCESSED_IDS_FILE = DATA_DIR / "processed_ids.json"
+CATEGORIES_FILE = DATA_DIR / "categories.json"
+CONFIG_FILE = Path("fetch.config.json")
+
+# ── fetch.config.json 로드 ───────────────────────────────────────────────────
+
+def _slugify(text: str) -> str:
+    """한글 제목을 간단한 ASCII 키로 변환."""
+    nfc = unicodedata.normalize("NFC", text)
+    slug = re.sub(r"[^\w가-힣]", "_", nfc).strip("_")
+    if not slug or all(c == '_' for c in slug):
+        slug = "cat_" + hashlib.md5(text.encode()).hexdigest()[:6]
+    return slug
+
+
+_AUTO_COLORS = ["green", "orange", "cyan", "magenta", "yellow", "blue"]
+
+def load_fetch_config() -> dict:
+    if CONFIG_FILE.exists():
+        with open(CONFIG_FILE, encoding="utf-8") as f:
+            cfg = json.load(f)
+    else:
+        print(f"⚠️  {CONFIG_FILE} 없음 — 기본 카테고리 4개로 동작합니다.")
+        cfg = {"categories": [
+            {"subject": "좋은 프로젝트",  "key": "project", "label": "프로젝트",    "emoji": 130, "color": "green"},
+            {"subject": "경제 뉴스 정리", "key": "economy", "label": "경제뉴스",    "emoji": 118, "color": "orange"},
+            {"subject": "아이디어",        "key": "idea",    "label": "아이디어",    "emoji": 105, "color": "cyan"},
+            {"subject": "처리해야 할 일", "key": "todo",    "label": "처리해야할일","emoji": 201, "color": "magenta"},
+        ]}
+
+    # key / color / emoji 미지정 시 자동 부여
+    for i, cat in enumerate(cfg.get("categories", [])):
+        if not cat.get("key"):
+            cat["key"] = _slugify(cat["subject"])
+        if not cat.get("color"):
+            cat["color"] = _AUTO_COLORS[i % len(_AUTO_COLORS)]
+        # emoji: 정수 → EMOJI_LIST 해석, 문자열 → 그대로
+        cat["emoji"] = resolve_emoji(cat.get("emoji", "📌"))
+        if not cat.get("label"):
+            cat["label"] = cat["subject"]
+    return cfg
+
+
+_CONFIG = load_fetch_config()
+TARGET_SUBJECTS: list[str] = [c["subject"] for c in _CONFIG["categories"]]
 
 # ── 태그 자동 생성용 키워드 매핑 ────────────────────────────────────────────
 TAG_KEYWORDS: dict[str, list[str]] = {
@@ -554,6 +663,11 @@ def main() -> None:
 
     save_news(news_list)
     save_processed_ids(processed_ids)
+
+    # categories.json 갱신 (웹 UI가 동적으로 읽음)
+    with open(CATEGORIES_FILE, "w", encoding="utf-8") as f:
+        json.dump(_CONFIG["categories"], f, ensure_ascii=False, indent=2)
+    print(f"   카테고리: {CATEGORIES_FILE} 업데이트 완료")
 
     print(f"\n{'=' * 50}")
     print(f"✅ 완료!")

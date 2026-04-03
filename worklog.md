@@ -2,6 +2,28 @@
 
 ---
 
+## 2026-04-03 12:20 ~ 16:24 (4h 4m) [tool: copilot-cli / session: b1030c54]
+
+### global.worklog.instructions.md — 시간 자동화
+- `<current_datetime>` 태그에서 시간 자동 추출 (UTC→KST +9h 변환)
+- 세션 시작 = 첫 번째 메시지, 세션 종료 = 정리 트리거 시점
+- 수동 시간 입력 불필요
+
+### fetch.config.json 기반 동적 카테고리 시스템
+- `fetch.config.json` 신규 생성 — 메일 제목/key/label/emoji/color 설정
+- `fetch_news.py`: config 파일 로딩, `data/categories.json` 자동 생성
+- `web/index.html`: STAGE 버튼, 헤더 통계, 카드 CSS를 categories.json에서 동적 생성
+- `fetch-news.instructions.md` 업데이트
+
+### emoji 인덱스 시스템
+- `EMOJI_LIST` 250개 (`fetch_news.py`에 하드코딩, 그룹별 주석)
+- `resolve_emoji()` 함수: 정수 → 목록 조회, 문자열 → 그대로 통과
+- `emoji_list.txt` 참조 파일 생성 (0–249, 그룹별 표)
+- `fetch.config.json` emoji 값을 숫자 인덱스로 변경 (130=🚀, 118=📈, 105=💡, 201=✅)
+- fallback 기본값도 숫자 인덱스로 통일
+
+---
+
 ## 2026-04-03 ~12:07 [tool: copilot-cli / session: de842a4e]
 
 ### fetch_news.py — Reply/Forward 인용 제거

@@ -252,18 +252,9 @@
       transition: all 0.1s;
     }
     .cat-btn:hover { border-color: var(--cyan); color: var(--cyan); }
-    .cat-btn.active[data-category="all"]           { background: #1a1a00; border-color: var(--yellow); color: var(--yellow); }
-    .cat-btn.active[data-category="좋은 프로젝트"] { background: #001a00; border-color: var(--green);  color: var(--green);  }
-    .cat-btn.active[data-category="경제 뉴스 정리"]{ background: #1a0800; border-color: var(--orange); color: var(--orange); }
-    .cat-btn.active[data-category="아이디어"]      { background: #001a1a; border-color: var(--cyan);   color: var(--cyan);   }
-    .cat-btn.active[data-category="처리해야 할 일"]{ background: #1a001a; border-color: var(--magenta);color: var(--magenta);}
-
-    /* 카드 카테고리 배지 4종 */
-    .cat-badge.project { background: #001800; color: var(--green);   border: 1px solid var(--green); }
-    .cat-badge.economy { background: #180800; color: var(--orange);  border: 1px solid var(--orange); }
-    .cat-badge.idea    { background: #001818; color: var(--cyan);    border: 1px solid var(--cyan); }
-    .cat-badge.todo    { background: #180018; color: var(--magenta); border: 1px solid var(--magenta); }
-    .cat-badge.other   { background: #000d1a; color: var(--cyan);    border: 1px solid var(--cyan); }
+    .cat-btn.active[data-category="all"] { background: #1a1a00; border-color: var(--yellow); color: var(--yellow); }
+    /* 카테고리별 동적 CSS는 JS에서 <style id="dynamic-cat-styles"> 로 주입 */
+    .cat-badge.other { background: #000d1a; color: var(--cyan); border: 1px solid var(--cyan); }
 
     /* ═══════════════════════════════════════════════
        TAG CLOUD
@@ -359,22 +350,7 @@
     .news-card:hover {
       transform: translate(-4px, -4px);
     }
-    .news-card.cat-project:hover {
-      border-color: var(--green);
-      box-shadow: 4px 4px 0 var(--green);
-    }
-    .news-card.cat-economy:hover {
-      border-color: var(--orange);
-      box-shadow: 4px 4px 0 var(--orange);
-    }
-    .news-card.cat-idea:hover {
-      border-color: var(--cyan);
-      box-shadow: 4px 4px 0 var(--cyan);
-    }
-    .news-card.cat-todo:hover {
-      border-color: var(--magenta);
-      box-shadow: 4px 4px 0 var(--magenta);
-    }
+    /* hover / ::before 동적 CSS는 JS에서 <style id="dynamic-cat-styles"> 로 주입 */
     .news-card.cat-other:hover {
       border-color: var(--cyan);
       box-shadow: 4px 4px 0 var(--cyan);
@@ -389,10 +365,6 @@
       font-size: 12px;
       color: var(--border);
     }
-    .news-card.cat-project::before { color: var(--green);   opacity: 0.4; }
-    .news-card.cat-economy::before { color: var(--orange);  opacity: 0.4; }
-    .news-card.cat-idea::before    { color: var(--cyan);    opacity: 0.4; }
-    .news-card.cat-todo::before    { color: var(--magenta); opacity: 0.4; }
 
     /* ── Card Header ── */
     .card-header {
@@ -412,9 +384,8 @@
       align-items: center;
       gap: 4px;
     }
-    .cat-badge.project { background: #001800; color: var(--green);  border: 1px solid var(--green); }
-    .cat-badge.economy { background: #180800; color: var(--orange); border: 1px solid var(--orange); }
-    .cat-badge.other   { background: #000d1a; color: var(--cyan);   border: 1px solid var(--cyan); }
+    .cat-badge.other { background: #000d1a; color: var(--cyan); border: 1px solid var(--cyan); }
+    /* 나머지 cat-badge 동적 CSS는 JS에서 주입 */
 
     .card-date {
       font-size: 11px;
@@ -813,10 +784,7 @@
   <p class="header-subtitle">▶ INSERT COIN TO READ THE NEWS ◀</p>
   <div class="header-stats">
     <div class="stat">TOTAL: <span class="stat-val" id="stat-total">--</span></div>
-    <div class="stat">🚀 프로젝트: <span class="stat-val" id="stat-project">--</span></div>
-    <div class="stat">📈 경제뉴스: <span class="stat-val" id="stat-economy">--</span></div>
-    <div class="stat">💡 아이디어: <span class="stat-val" id="stat-idea">--</span></div>
-    <div class="stat">✅ 할일: <span class="stat-val" id="stat-todo">--</span></div>
+    <span id="stat-categories"></span>
     <div class="stat">🏷️ TAGS: <span class="stat-val" id="stat-tags">--</span></div>
     <div class="stat">🕐 UPDATED: <span class="stat-val" id="stat-updated">--</span></div>
   </div>
@@ -846,10 +814,7 @@
   <div class="filter-row">
     <span class="filter-label">STAGE:</span>
     <button class="cat-btn active" data-category="all">ALL</button>
-    <button class="cat-btn" data-category="좋은 프로젝트">🚀 프로젝트</button>
-    <button class="cat-btn" data-category="경제 뉴스 정리">📈 경제뉴스</button>
-    <button class="cat-btn" data-category="아이디어">💡 아이디어</button>
-    <button class="cat-btn" data-category="처리해야 할 일">✅ 처리해야할일</button>
+    <span id="stage-buttons" style="display:contents"></span>
   </div>
 </div>
 
@@ -889,11 +854,36 @@
   //  STATE
   // ════════════════════════════════════════════
   let allNews = [];
+  let CATEGORIES = [];   // fetch.config.json에서 로드
   let activeCategory = 'all';
   let activeTags = new Set();
   let searchQuery = '';
   let currentPage = 0;
   const PAGE_SIZE = 18;
+
+  // 컬러 팔레트 (color 이름 → CSS 값)
+  const COLOR_VAR  = { green:'--green', orange:'--orange', cyan:'--cyan', magenta:'--magenta', yellow:'--yellow', blue:'--blue' };
+  const COLOR_BG   = { green:'#001800', orange:'#180800', cyan:'#001818', magenta:'#180018', yellow:'#181800', blue:'#000018' };
+  const COLOR_ABG  = { green:'#001a00', orange:'#1a0800', cyan:'#001a1a', magenta:'#1a001a', yellow:'#1a1a00', blue:'#00001a' };
+
+  // ════════════════════════════════════════════
+  //  DYNAMIC CATEGORY CSS 주입
+  // ════════════════════════════════════════════
+  function injectCategoryStyles() {
+    let css = '';
+    CATEGORIES.forEach(cat => {
+      const cv  = `var(${COLOR_VAR[cat.color] || '--cyan'})`;
+      const bg  = COLOR_BG[cat.color]  || '#001818';
+      const abg = COLOR_ABG[cat.color] || '#001a1a';
+      css += `.cat-badge.${cat.key} { background:${bg}; color:${cv}; border:1px solid ${cv}; }\n`;
+      css += `.cat-btn.active[data-category="${cat.subject}"] { background:${abg}; border-color:${cv}; color:${cv}; }\n`;
+      css += `.news-card.cat-${cat.key}:hover { border-color:${cv}; box-shadow:4px 4px 0 ${cv}; }\n`;
+      css += `.news-card.cat-${cat.key}::before { color:${cv}; opacity:0.4; }\n`;
+    });
+    let el = document.getElementById('dynamic-cat-styles');
+    if (!el) { el = document.createElement('style'); el.id = 'dynamic-cat-styles'; document.head.appendChild(el); }
+    el.textContent = css;
+  }
 
   // ════════════════════════════════════════════
   //  PIXEL STARS
@@ -919,10 +909,29 @@
   // ════════════════════════════════════════════
   async function loadData() {
     try {
+      // categories.json 로드 (실패 시 news.json에서 추론)
+      try {
+        const catRes = await fetch('/news/data/categories.json');
+        if (catRes.ok) CATEGORIES = await catRes.json();
+      } catch (_) { /* ignore */ }
+
       const res = await fetch('/news/data/news.json');
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       allNews = await res.json();
       allNews.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+      // categories.json 없으면 news에서 추론
+      if (!CATEGORIES.length) {
+        const AUTO_COLORS = ['green','orange','cyan','magenta','yellow','blue'];
+        const seen = new Map();
+        allNews.forEach(n => { if (n.category && !seen.has(n.category)) seen.set(n.category, seen.size); });
+        CATEGORIES = [...seen.entries()].map(([subject, i]) => ({
+          subject, key: 'cat_' + i, label: subject, emoji: '📌',
+          color: AUTO_COLORS[i % AUTO_COLORS.length]
+        }));
+      }
+
+      injectCategoryStyles();
 
       const lm = res.headers.get('Last-Modified');
       if (lm) {
@@ -990,21 +999,13 @@
 
   function getCatKey(category) {
     if (!category) return 'other';
-    if (category.includes('프로젝트')) return 'project';
-    if (category.includes('경제'))    return 'economy';
-    if (category.includes('아이디어')) return 'idea';
-    if (category.includes('처리해야')) return 'todo';
-    return 'other';
+    const found = CATEGORIES.find(c => c.subject === category);
+    return found ? found.key : 'other';
   }
 
   function getCatLabel(catKey) {
-    return {
-      project: '🚀 프로젝트',
-      economy: '📈 경제뉴스',
-      idea:    '💡 아이디어',
-      todo:    '✅ 할일',
-      other:   '📌 기타'
-    }[catKey] ?? '📌 기타';
+    const found = CATEGORIES.find(c => c.key === catKey);
+    return found ? `${found.emoji} ${found.label}` : '📌 기타';
   }
 
   function getAllTagCounts() {
@@ -1349,17 +1350,27 @@
   //  INIT
   // ════════════════════════════════════════════
   function initUI() {
-    // Stats
-    document.getElementById('stat-total').textContent   = allNews.length;
-    document.getElementById('stat-project').textContent = allNews.filter(n => n.category === '좋은 프로젝트').length;
-    document.getElementById('stat-economy').textContent = allNews.filter(n => n.category === '경제 뉴스 정리').length;
-    document.getElementById('stat-idea').textContent    = allNews.filter(n => n.category === '아이디어').length;
-    document.getElementById('stat-todo').textContent    = allNews.filter(n => n.category === '처리해야 할 일').length;
+    // Stats — 카테고리별 동적 생성
+    document.getElementById('stat-total').textContent = allNews.length;
+    const statCatEl = document.getElementById('stat-categories');
+    statCatEl.innerHTML = CATEGORIES.map(cat =>
+      `<div class="stat" style="display:inline">${esc(cat.emoji)} ${esc(cat.label)}: <span class="stat-val" id="stat-${esc(cat.key)}">0</span></div>`
+    ).join(' ');
+    CATEGORIES.forEach(cat => {
+      const el = document.getElementById(`stat-${cat.key}`);
+      if (el) el.textContent = allNews.filter(n => n.category === cat.subject).length;
+    });
 
     updateTicker();
     renderTagCloud();
 
-    // Category buttons
+    // STAGE 버튼 동적 생성
+    const stageEl = document.getElementById('stage-buttons');
+    stageEl.innerHTML = CATEGORIES.map(cat =>
+      `<button class="cat-btn" data-category="${esc(cat.subject)}">${esc(cat.emoji)} ${esc(cat.label)}</button>`
+    ).join('');
+
+    // Category buttons (ALL + 동적 생성된 것 모두)
     document.querySelectorAll('.cat-btn[data-category]').forEach(btn => {
       btn.addEventListener('click', () => {
         document.querySelectorAll('.cat-btn').forEach(b => b.classList.remove('active'));

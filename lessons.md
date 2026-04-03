@@ -4,6 +4,24 @@
 
 ---
 
+## 2026-04-03 — 설정 파일 기반 동적 UI
+
+- 하드코딩된 카테고리를 JSON 설정 파일(`fetch.config.json`)로 분리하면
+  Python 스크립트와 웹 UI 양쪽을 한 번에 제어할 수 있다.
+- 웹 UI에서 `data/categories.json`을 fetch해 CSS·버튼·통계를 동적 생성하면
+  소스 코드 수정 없이 카테고리 추가/삭제가 가능하다.
+- categories.json 없을 때 news.json의 category 필드에서 자동 추론하는 fallback을
+  함께 두면 하위 호환성이 유지된다.
+
+## 2026-04-03 — emoji 참조 시스템
+
+- emoji를 문자열로 직접 입력하면 복붙이 어렵고 잘못 입력되기 쉽다.
+- 코드에 숫자 인덱스 목록(`EMOJI_LIST`)을 정의하고 설정 파일에서는
+  숫자(`"emoji": 130`)로만 지정하면 오타 없이 안전하게 emoji를 선택할 수 있다.
+- 문자열도 fallback으로 허용해두면 이전 설정과 호환된다.
+
+---
+
 ## 2026-04-03 — Gmail Reply/Forward 인용 제거 전략
 
 **문제**: Reply/Forward 메일은 이전 내용이 누적되어 본문이 수십만 자까지 불어난다.

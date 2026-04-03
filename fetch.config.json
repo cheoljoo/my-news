@@ -1,0 +1,39 @@
+{
+  "categories": [
+    {
+      "subject": "좋은 프로젝트",
+      "key": "project",
+      "label": "프로젝트",
+      "emoji": 130,
+      "color": "green"
+    },
+    {
+      "subject": "경제 뉴스 정리",
+      "key": "economy",
+      "label": "경제뉴스",
+      "emoji": 118,
+      "color": "orange"
+    },
+    {
+      "subject": "AI 뉴스",
+      "key": "ai",
+      "label": "AI뉴스",
+      "emoji": 189,
+      "color": "pink"
+    },
+    {
+      "subject": "아이디어",
+      "key": "idea",
+      "label": "아이디어",
+      "emoji": 105,
+      "color": "cyan"
+    },
+    {
+      "subject": "처리해야 할 일",
+      "key": "todo",
+      "label": "처리해야할일",
+      "emoji": 201,
+      "color": "magenta"
+    }
+  ]
+}

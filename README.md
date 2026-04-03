@@ -33,12 +33,15 @@
 ```
 my-news/
 ├── fetch_news.py           # Gmail 읽기 + JSON 파싱 + 태그 자동 생성
+├── fetch.config.json       # 카테고리 설정 (메일 제목, emoji 인덱스, 색상 등)
+├── emoji_list.txt          # emoji 인덱스 참조 목록 (0–249)
 ├── serve.py                # HTTP 서버 실행 (포트 8080)
 ├── pyproject.toml          # 의존성 정의
 ├── credentials.json        # (직접 준비) Google OAuth 클라이언트 파일
 ├── token.json              # (자동 생성) OAuth 인증 토큰
 ├── data/
 │   ├── news.json           # 파싱된 뉴스 데이터 (자동 생성)
+│   ├── categories.json     # 카테고리 메타데이터 — 웹 UI 동적 로딩 (자동 생성)
 │   └── processed_ids.json  # 처리 완료된 메일 ID — 중복 방지 (자동 생성)
 └── web/
     └── index.html          # 🎮 8-bit 아케이드 웹사이트
@@ -596,6 +599,26 @@ python3 tui_news.py
 | 트리거 | 동작 |
 |--------|------|
 | **"일을 정리 해주세요"** | README 업데이트 + worklog.md 추가 + lessons.md 기록 |
+
+---
+
+## 🗃️ 카테고리 설정 (fetch.config.json)
+
+대상 메일 제목과 웹 UI 표시 정보를 `fetch.config.json`에서 관리합니다.
+새 카테고리를 추가하면 **fetch + 웹 STAGE 버튼/통계가 자동 반영**됩니다.
+
+```json
+{
+  "categories": [
+    { "subject": "좋은 프로젝트", "key": "project", "label": "프로젝트", "emoji": 130, "color": "green" }
+  ]
+}
+```
+
+- `emoji`: 숫자(인덱스) 또는 직접 문자열(`"🚀"`) 모두 가능
+- `emoji_list.txt` 파일에서 0–249 인덱스 참조
+- `color` 가능 값: `green`, `orange`, `cyan`, `magenta`, `yellow`, `blue`
+- `fetch_news.py` 실행 시 `data/categories.json` 자동 갱신 → 웹 즉시 반영
 
 ---
 
