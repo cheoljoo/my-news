@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>📰 NEWS ARCADE</title>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📰</text></svg>">
+  <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📰</text></svg>">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
   <style>
     /* ═══════════════════════════════════════════════
        RESET & BASE
@@ -809,7 +812,7 @@
       autocomplete="off"
       spellcheck="false"
     >
-    <button class="clear-btn" id="clear-btn" title="초기화">CLR</button>
+    <button class="clear-btn" id="clear-btn" title="초기화"><i class="fa-solid fa-rotate-left"></i> CLR</button>
   </div>
   <div class="filter-row">
     <span class="filter-label">STAGE:</span>
@@ -1030,7 +1033,7 @@
            <div class="section-label">LINKS</div>
            ${urls3.map(u =>
              `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer" class="url-link"
-                title="${esc(u)}" onclick="event.stopPropagation()">${esc(shortUrl(u))}</a>`
+                title="${esc(u)}" onclick="event.stopPropagation()"><i class="fa-solid fa-arrow-up-right-from-square fa-2xs"></i> ${esc(shortUrl(u))}</a>`
            ).join('')}
            ${(item.urls ?? []).length > 3 ? `<span style="font-size:11px;color:#555;padding-left:6px">+${(item.urls ?? []).length - 3}개 더...</span>` : ''}
          </div>`
@@ -1074,7 +1077,7 @@
           ${tagsHtml}
         </div>
         <div class="card-footer">
-          <button class="expand-btn" onclick="event.stopPropagation();toggleExpand('${safeId}')">▼ MORE</button>
+          <button class="expand-btn" onclick="event.stopPropagation();toggleExpand('${safeId}')"><i class="fa-solid fa-chevron-down"></i> MORE</button>
         </div>
       </article>`;
   }
@@ -1126,14 +1129,14 @@
       if (right < totalPages - 1) pages.push('…', totalPages - 1);
     }
     pg.innerHTML = `
-      <button class="page-btn" onclick="goPage(${currentPage - 1})" ${currentPage === 0 ? 'disabled' : ''}>◀ PREV</button>
+      <button class="page-btn" onclick="goPage(${currentPage - 1})" ${currentPage === 0 ? 'disabled' : ''}><i class="fa-solid fa-chevron-left"></i> PREV</button>
       <div class="page-numbers">
         ${pages.map(p => p === '…'
           ? `<span class="page-info">…</span>`
           : `<button class="page-btn${p === currentPage ? ' active' : ''}" onclick="goPage(${p})">${p + 1}</button>`
         ).join('')}
       </div>
-      <button class="page-btn" onclick="goPage(${currentPage + 1})" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>NEXT ▶</button>
+      <button class="page-btn" onclick="goPage(${currentPage + 1})" ${currentPage >= totalPages - 1 ? 'disabled' : ''}>NEXT <i class="fa-solid fa-chevron-right"></i></button>
     `;
   }
 
@@ -1221,7 +1224,7 @@
     const expanded = card.classList.toggle('card-expanded');
     if (sum) sum.classList.toggle('expanded', expanded);
     if (opi) opi.classList.toggle('expanded', expanded);
-    if (btn) btn.textContent = expanded ? '▲ LESS' : '▼ MORE';
+    if (btn) btn.innerHTML = expanded ? '<i class="fa-solid fa-chevron-up"></i> LESS' : '<i class="fa-solid fa-chevron-down"></i> MORE';
     // 고정 높이 해제/복원
     card.style.height = expanded ? 'auto' : '';
     card.style.minHeight = expanded ? '400px' : '';
@@ -1287,7 +1290,7 @@
 
     const urlsHtml = (item.urls ?? []).length
       ? `<div class="modal-section">
-           <div class="modal-section-title">▶ LINKS</div>
+           <div class="modal-section-title"><i class="fa-solid fa-link"></i> LINKS</div>
            ${(item.urls ?? []).map(u =>
              `<a href="${esc(u)}" target="_blank" rel="noopener noreferrer"
                  class="modal-url-link" onclick="event.stopPropagation()">${esc(u)}</a>`
@@ -1297,21 +1300,21 @@
 
     const summaryHtml = (item.summary ?? '').trim()
       ? `<div class="modal-section">
-           <div class="modal-section-title">▶ SUMMARY</div>
+           <div class="modal-section-title"><i class="fa-solid fa-align-left"></i> SUMMARY</div>
            <div class="modal-text">${esc(item.summary)}</div>
          </div>`
       : '';
 
     const opinionHtml = (item.opinion ?? '').trim()
       ? `<div class="modal-section">
-           <div class="modal-section-title opinion">▶ OPINION</div>
+           <div class="modal-section-title opinion"><i class="fa-solid fa-lightbulb"></i> OPINION</div>
            <div class="modal-opinion-text">${esc(item.opinion)}</div>
          </div>`
       : '';
 
     const tagsHtml = (item.tags ?? []).length
       ? `<div class="modal-section">
-           <div class="modal-section-title tags-lbl">▶ TAGS</div>
+           <div class="modal-section-title tags-lbl"><i class="fa-solid fa-tags"></i> TAGS</div>
            <div class="modal-tags">
              ${(item.tags ?? []).map(tag =>
                `<span class="tag-chip${activeTags.has(tag) ? ' active' : ''}"
@@ -1325,7 +1328,7 @@
       <div class="modal-header">
         <span class="cat-badge ${catKey}">${catLabel}</span>
         <span class="modal-meta" style="font-size:13px;color:#888">${formatDate(item.date)}</span>
-        <button class="modal-close" onclick="closeModal()">✕</button>
+        <button class="modal-close" onclick="closeModal()"><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="modal-body">
         <div class="modal-subject">${esc(item.subject ?? '')}</div>

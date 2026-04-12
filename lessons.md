@@ -4,6 +4,14 @@
 
 ---
 
+## 2026-04-12 — Font Awesome + 커스텀 폰트 혼용
+
+- `font-family`를 강제 지정한 버튼/링크 안에서도 FA `<i>` 태그는 자체 CSS로 `font-family`를 오버라이드하므로 별도 처리 불필요
+- `btn.textContent`로 아이콘 HTML을 설정하면 태그가 텍스트로 이스케이프되어 깨짐 → `btn.innerHTML`을 사용해야 함
+- SVG 데이터 URI 파비콘 (`data:image/svg+xml,...`)은 별도 이미지 파일 없이 이모지를 브라우저 탭 아이콘으로 사용하는 가장 간단한 방법
+
+---
+
 ## 2026-04-03 — 설정 파일 기반 동적 UI
 
 - 하드코딩된 카테고리를 JSON 설정 파일(`fetch.config.json`)로 분리하면

@@ -2,6 +2,19 @@
 
 ---
 
+## 2026-04-12 21:13 ~ 21:18 (5m) [tool: copilot-cli / session: bde63f69]
+
+- web/index.html에 Font Awesome 6.5.1 CDN 추가
+- Favicon(📰 SVG 이모지) 및 apple-touch-icon 추가
+- CLR 버튼에 `fa-rotate-left` 아이콘 적용
+- URL 링크에 `fa-arrow-up-right-from-square` 아이콘 추가
+- MORE/LESS 확장 버튼에 `fa-chevron-down/up` 아이콘 적용 (textContent → innerHTML 변경)
+- 페이지네이션 PREV/NEXT에 `fa-chevron-left/right` 아이콘 적용
+- 모달 LINKS/SUMMARY/OPINION/TAGS 섹션 제목에 FA 아이콘 추가
+- 모달 닫기 버튼에 `fa-xmark` 아이콘 적용
+
+---
+
 ## 2026-04-03 12:20 ~ 16:24 (4h 4m) [tool: copilot-cli / session: b1030c54]
 
 ### global.worklog.instructions.md — 시간 자동화
